@@ -16,6 +16,16 @@
   --cat-3: #b14d8d;
   --cat-4: #771e59;
 
+  /* ワードクラウドなど、カテゴリの色分け */
+  --wc-1: #2f55c0;
+  --wc-2: #a83c7f;
+  --wc-3: #1f7a6a;
+  --wc-4: #b0581c;
+  --wc-5: #6b4bb5;
+  --wc-6: #5a6875;
+  --wc-7: #8a7a12;
+  --wc-8: #b8323a;
+
   --serif: 'Yusei Magic', 'Hiragino Sans', system-ui, sans-serif;
   --sans: 'Yusei Magic', 'Hiragino Sans', system-ui, sans-serif;
 
@@ -46,6 +56,15 @@
     --cat-2: #7a3063;
     --cat-3: #b1568f;
     --cat-4: #e7a0cb;
+
+    --wc-1: #8ea8f2;
+    --wc-2: #e695c7;
+    --wc-3: #6fcbb6;
+    --wc-4: #eda06a;
+    --wc-5: #b9a2ef;
+    --wc-6: #94a2ae;
+    --wc-7: #d8c35a;
+    --wc-8: #f08a8f;
 
     color-scheme: dark;
   }
