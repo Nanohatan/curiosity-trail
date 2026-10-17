@@ -1,0 +1,443 @@
+---
+import type { TrailInterest, TrailLog } from '../lib/trail';
+import { embedJson } from '../lib/data';
+
+interface Props {
+  logs: TrailLog[];
+  interests: TrailInterest[];
+  /** 今週・今月・今年の統計を出すか */
+  stats?: boolean;
+  label?: string;
+}
+const { logs, interests, stats = false, label = '日ごとの記録' } = Astro.props;
+const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+const uid = Math.random().toString(36).slice(2, 8);
+---
+
+<section class="trail" data-trail>
+  <script type="application/json" data-trail-json set:html={embedJson({ logs, interests, base })} />
+
+  <div class="controls">
+    <fieldset class="metric">
+      <legend class="visually-hidden">色の付け方</legend>
+      <label><input type="radio" name={`metric-${uid}`} value="actions" data-metric checked /><span>アクション数</span></label>
+      <label><input type="radio" name={`metric-${uid}`} value="categories" data-metric /><span>カテゴリ数</span></label>
+    </fieldset>
+    <label class="range">
+      <span class="visually-hidden">表示する期間</span>
+      <select data-range>
+        <option value="recent">直近1年</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="heatmap-scroll" data-scroll>
+    <div class="heatmap">
+      <div class="months num" data-months aria-hidden="true"></div>
+      <div class="weekdays" aria-hidden="true">
+        <span>月</span><span></span><span>水</span><span></span><span>金</span><span></span><span></span>
+      </div>
+      <div class="grid" data-grid role="group" aria-label={label}></div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <p><span data-caption>1日に記録したアクションの数</span>。<span class="num" data-total></span></p>
+    <div class="scale" aria-hidden="true">
+      <span>少</span>
+      <i class="cell lv-0"></i><i class="cell lv-1"></i><i class="cell lv-2"></i><i class="cell lv-3"></i><i class="cell lv-4"></i>
+      <span>多</span>
+    </div>
+  </div>
+
+  <div class="detail" data-detail aria-live="polite">
+    <noscript><p class="empty">草の表示には JavaScript を使っています。</p></noscript>
+  </div>
+
+  {
+    stats && (
+      <section class="stats" data-stats aria-labelledby={`stats-title-${uid}`}>
+        <div class="stats-head">
+          <h2 id={`stats-title-${uid}`}>振り返り</h2>
+          <div role="tablist" aria-label="集計する期間">
+            <button type="button" role="tab" id={`tab-week-${uid}`} data-period="week" aria-selected="false">今週</button>
+            <button type="button" role="tab" id={`tab-month-${uid}`} data-period="month" aria-selected="true">今月</button>
+            <button type="button" role="tab" id={`tab-year-${uid}`} data-period="year" aria-selected="false">今年</button>
+          </div>
+        </div>
+        <div role="tabpanel" tabindex="0" />
+      </section>
+    )
+  }
+</section>
+
+<script>
+  import '../scripts/trail-client';
+</script>
+
+<style is:global>
+  .trail {
+    --cell: 12px;
+    --gap: 3px;
+  }
+  @media (min-width: 900px) {
+    .trail {
+      --cell: 14px;
+    }
+  }
+
+  .trail .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .trail .metric {
+    display: inline-flex;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    padding: 3px;
+    margin: 0;
+    background: var(--surface);
+  }
+  .trail .metric label {
+    position: relative;
+    cursor: pointer;
+  }
+  .trail .metric input {
+    position: absolute;
+    opacity: 0;
+    inset: 0;
+    cursor: pointer;
+  }
+  .trail .metric span {
+    display: block;
+    padding: 0.3rem 0.9rem;
+    border-radius: 999px;
+    font-size: var(--step--1);
+    color: var(--muted);
+  }
+  .trail .metric input:checked + span {
+    color: #fff;
+    background: var(--act-4);
+  }
+  .trail .metric label:nth-child(3) input:checked + span {
+    background: var(--cat-4);
+  }
+  @media (prefers-color-scheme: dark) {
+    .trail .metric input:checked + span {
+      color: var(--bg);
+    }
+  }
+  .trail .metric input:focus-visible + span {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+  }
+
+  .trail select {
+    font: inherit;
+    font-size: var(--step--1);
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 0.35rem 0.6rem;
+  }
+
+  .heatmap-scroll {
+    overflow-x: auto;
+    padding: 4px 2px 8px;
+    margin: 0 -2px;
+    scrollbar-width: thin;
+  }
+  .heatmap {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 6px;
+    row-gap: 4px;
+    width: max-content;
+  }
+  .months {
+    grid-column: 2;
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 53), var(--cell));
+    column-gap: var(--gap);
+    font-size: 11px;
+    color: var(--muted);
+    height: 1.2em;
+    line-height: 1.2;
+  }
+  .months span {
+    white-space: nowrap;
+  }
+  .weekdays {
+    grid-column: 1;
+    grid-row: 2;
+    display: grid;
+    grid-template-rows: repeat(7, var(--cell));
+    row-gap: var(--gap);
+    font-size: 10px;
+    color: var(--muted);
+    line-height: var(--cell);
+  }
+  .grid {
+    grid-column: 2;
+    grid-row: 2;
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(7, var(--cell));
+    grid-auto-columns: var(--cell);
+    gap: var(--gap);
+  }
+
+  .trail .cell {
+    display: block;
+    width: var(--cell);
+    height: var(--cell);
+    border-radius: 3px;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    background: var(--cell-0);
+  }
+  .trail button.cell {
+    cursor: pointer;
+  }
+  .trail button.cell:hover {
+    box-shadow: inset 0 0 0 1.5px var(--ink);
+  }
+  .trail .cell-empty {
+    background: transparent;
+  }
+  .trail .cell-future {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--rule);
+    cursor: default;
+  }
+  .trail button.cell[aria-pressed='true'] {
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--ink);
+  }
+
+  .trail .lv-1 { background: var(--act-1); }
+  .trail .lv-2 { background: var(--act-2); }
+  .trail .lv-3 { background: var(--act-3); }
+  .trail .lv-4 { background: var(--act-4); }
+  .trail[data-metric='categories'] .lv-1 { background: var(--cat-1); }
+  .trail[data-metric='categories'] .lv-2 { background: var(--cat-2); }
+  .trail[data-metric='categories'] .lv-3 { background: var(--cat-3); }
+  .trail[data-metric='categories'] .lv-4 { background: var(--cat-4); }
+
+  .trail .legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem 1.5rem;
+    font-size: var(--step--1);
+    color: var(--muted);
+    margin-top: 0.25rem;
+  }
+  .trail .legend p {
+    margin: 0;
+  }
+  .trail .scale {
+    display: flex;
+    align-items: center;
+    gap: var(--gap);
+  }
+  .trail .scale span {
+    margin: 0 4px;
+  }
+
+  .trail .detail {
+    margin-top: 2.5rem;
+    max-width: 44rem;
+  }
+  .trail .detail h3,
+  .trail .bars h3 {
+    font-size: var(--step-1);
+    margin-bottom: 0.75rem;
+  }
+  .detail-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .detail-sum {
+    color: var(--muted);
+    font-size: var(--step--1);
+    margin: -0.5rem 0 0.75rem;
+  }
+  .link-button {
+    font: inherit;
+    font-size: var(--step--1);
+    color: var(--muted);
+    background: none;
+    border: 0;
+    padding: 0.25rem 0;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    cursor: pointer;
+  }
+
+  .logs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .log {
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .log-date {
+    flex: 0 0 4.5rem;
+    color: var(--muted);
+    font-size: var(--step--1);
+    padding-top: 0.15rem;
+  }
+  .log-body p {
+    margin: 0;
+  }
+  .log-action {
+    font-weight: 500;
+  }
+  .log-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: var(--step--1);
+    color: var(--muted);
+  }
+  .log-note {
+    margin-top: 0.25rem !important;
+    font-size: var(--step--1);
+  }
+  .empty {
+    color: var(--muted);
+  }
+
+  .stats {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 2px solid var(--ink);
+  }
+  .stats-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .stats-head h2 {
+    font-size: var(--step-2);
+  }
+  [role='tablist'] {
+    display: flex;
+    gap: 0.25rem;
+  }
+  [role='tab'] {
+    font: inherit;
+    color: var(--muted);
+    background: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    padding: 0.35rem 0.75rem;
+    cursor: pointer;
+  }
+  [role='tab'][aria-selected='true'] {
+    color: var(--ink);
+    font-weight: 700;
+    border-bottom-color: var(--ink);
+  }
+  .stats-range {
+    color: var(--muted);
+    font-size: var(--step--1);
+    margin: 0.5rem 0 1.5rem;
+  }
+  .figures {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem 1rem;
+    margin: 0;
+  }
+  @media (min-width: 720px) {
+    .figures {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+  }
+  .figure dt {
+    font-size: var(--step--1);
+    color: var(--muted);
+  }
+  .figure dd {
+    margin: 0;
+  }
+  .figure-value {
+    display: block;
+    font-family: var(--serif);
+    font-weight: 800;
+    font-size: var(--step-3);
+    line-height: 1.1;
+  }
+  .figure-sub {
+    display: block;
+    font-size: var(--step--1);
+    color: var(--muted);
+    margin-top: 0.25rem;
+  }
+
+  .breakdown {
+    display: grid;
+    gap: 2.5rem;
+    margin-top: 3rem;
+  }
+  @media (min-width: 720px) {
+    .breakdown {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .bars ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .bars li {
+    display: grid;
+    grid-template-columns: 8rem 1fr 2.5rem;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.3rem 0;
+    font-size: var(--step--1);
+  }
+  .bar-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bar-track {
+    height: 8px;
+    background: var(--cell-0);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    display: block;
+    height: 100%;
+    background: var(--act-3);
+    border-radius: 4px;
+  }
+  .bars:first-child .bar-fill {
+    background: var(--cat-3);
+  }
+  .bar-count {
+    text-align: right;
+  }
+</style>

@@ -1,0 +1,86 @@
+---
+import '../styles/global.css';
+import { url } from '../lib/url';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+const { title, description = '何にハマって、何をしたかの記録。' } = Astro.props;
+const fullTitle = title ? `${title} | curiosity trail` : 'curiosity trail';
+const path = Astro.url.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, ''), '') || '/';
+---
+
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href={url('favicon.svg')} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap"
+    />
+    <title>{fullTitle}</title>
+  </head>
+  <body>
+    <header class="site-header wrap">
+      <a class="site-name" href={url()}>curiosity trail</a>
+      <nav aria-label="サイト内">
+        <a href={url()} aria-current={path === '/' ? 'page' : undefined}>足跡</a>
+        <a href={url('interests/')} aria-current={path.startsWith('/interests') ? 'page' : undefined}>
+          ハマったもの
+        </a>
+      </nav>
+    </header>
+    <main class="wrap">
+      <slot />
+    </main>
+    <footer class="site-footer wrap">
+      <p>この記録は自分のために書いています。</p>
+    </footer>
+  </body>
+</html>
+
+<style>
+  .site-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-top: 1.25rem;
+    padding-bottom: 1.25rem;
+  }
+  .site-name {
+    font-family: var(--serif);
+    font-weight: 800;
+    font-size: var(--step-1);
+    text-decoration: none;
+    letter-spacing: 0.01em;
+  }
+  nav {
+    display: flex;
+    gap: 1.25rem;
+    font-size: var(--step--1);
+  }
+  nav a {
+    text-decoration: none;
+    color: var(--muted);
+    padding: 0.25rem 0;
+    border-bottom: 2px solid transparent;
+  }
+  nav a[aria-current='page'] {
+    color: var(--ink);
+    border-bottom-color: currentColor;
+  }
+  .site-footer {
+    margin-top: 5rem;
+    padding-top: 1.5rem;
+    padding-bottom: 3rem;
+    color: var(--muted);
+    font-size: var(--step--1);
+  }
+</style>

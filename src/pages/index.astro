@@ -1,16 +1,134 @@
 ---
+import Base from '../layouts/Base.astro';
+import Trail from '../components/Trail.astro';
+import { loadTrail, statusLabel } from '../lib/data';
+import { url } from '../lib/url';
+
+const { interests, logs } = await loadTrail();
+const counts = new Map<string, number>();
+for (const l of logs) counts.set(l.interest, (counts.get(l.interest) ?? 0) + 1);
+const active = interests.filter((i) => i.status === 'active');
+const categories = new Set(interests.map((i) => i.category));
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<Base>
+  <div class="intro">
+    <h1>好奇心の足跡</h1>
+    <p class="lede">
+      何にハマって、何をしたか。マスの色が濃い日ほど、たくさん動いた日です。
+    </p>
+    <p class="streak" data-streak hidden></p>
+  </div>
+
+  <Trail logs={logs} interests={interests} stats />
+
+  <section class="now" aria-labelledby="now-title">
+    <h2 id="now-title">いまハマっているもの</h2>
+    <p class="now-sub num">これまでに {interests.length} 個、{categories.size} カテゴリ</p>
+    <ul class="interest-list">
+      {
+        active.map((i) => (
+          <li>
+            <a href={url(`interests/${i.id}/`)}>{i.name}</a>
+            <span class="cat">{i.category}</span>
+            <span class="since num">{i.started.replaceAll('-', '.')} から</span>
+            <span class="count num">{counts.get(i.id) ?? 0} 件</span>
+          </li>
+        ))
+      }
+    </ul>
+    <p><a href={url('interests/')}>{statusLabel.paused}・{statusLabel.done}のものも見る</a></p>
+  </section>
+</Base>
+
+<style>
+  .intro {
+    margin: 2.5rem 0 2rem;
+  }
+  h1 {
+    font-size: clamp(2.5rem, 7vw, 4.5rem);
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    line-height: 1.1;
+  }
+  .lede {
+    margin: 0.75rem 0 0;
+    color: var(--muted);
+    max-width: 36em;
+  }
+  .streak {
+    display: inline-block;
+    margin: 1rem 0 0;
+    font-size: var(--step--1);
+    font-weight: 700;
+    padding-left: 0.75rem;
+    border-left: 3px solid var(--act-3);
+  }
+  .now {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 2px solid var(--ink);
+  }
+  .now h2 {
+    font-size: var(--step-2);
+  }
+  .now-sub {
+    color: var(--muted);
+    font-size: var(--step--1);
+    margin: 0.25rem 0 1.25rem;
+  }
+  .interest-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.25rem;
+    border-top: 1px solid var(--rule);
+  }
+  .interest-list li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.1rem 1rem;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .interest-list a {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: var(--step-1);
+    text-decoration: none;
+  }
+  .interest-list a:hover {
+    text-decoration: underline;
+  }
+  .cat,
+  .since,
+  .count {
+    font-size: var(--step--1);
+    color: var(--muted);
+  }
+  .count {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+  }
+  .cat {
+    grid-column: 1;
+  }
+  .since {
+    grid-column: 1;
+  }
+  @media (min-width: 640px) {
+    .interest-list li {
+      grid-template-columns: 1fr 9rem 9rem 4rem;
+      align-items: baseline;
+    }
+    .cat,
+    .since,
+    .count {
+      grid-column: auto;
+      grid-row: auto;
+    }
+    .count {
+      text-align: right;
+    }
+  }
+</style>

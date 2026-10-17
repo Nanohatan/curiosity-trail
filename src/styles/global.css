@@ -1,0 +1,130 @@
+:root {
+  --bg: #edf1f2;
+  --surface: #f7f9f9;
+  --ink: #17212b;
+  --muted: #5a6875;
+  --rule: #c9d3d8;
+  --focus: #17212b;
+
+  --cell-0: #dbe2e5;
+  --act-1: #c4d0ee;
+  --act-2: #8ca2e0;
+  --act-3: #4d6dca;
+  --act-4: #233c92;
+  --cat-1: #edc9de;
+  --cat-2: #d68cba;
+  --cat-3: #b14d8d;
+  --cat-4: #771e59;
+
+  --serif: 'Shippori Mincho', 'Hiragino Mincho ProN', serif;
+  --sans: 'Zen Kaku Gothic New', 'Hiragino Sans', system-ui, sans-serif;
+
+  --step--1: 0.8125rem;
+  --step-0: 1rem;
+  --step-1: 1.25rem;
+  --step-2: 1.75rem;
+  --step-3: 2.75rem;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #131920;
+    --surface: #1a222b;
+    --ink: #e3e8ec;
+    --muted: #94a2ae;
+    --rule: #2c3743;
+    --focus: #e3e8ec;
+
+    --cell-0: #212b35;
+    --act-1: #24375f;
+    --act-2: #32509b;
+    --act-3: #5779d6;
+    --act-4: #a0b5f2;
+    --cat-1: #48203b;
+    --cat-2: #7a3063;
+    --cat-3: #b1568f;
+    --cat-4: #e7a0cb;
+
+    color-scheme: dark;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: var(--step-0);
+  line-height: 1.7;
+  font-feature-settings: 'palt' 0;
+}
+
+a {
+  color: inherit;
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--serif);
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.wrap {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+@media (min-width: 640px) {
+  .wrap {
+    padding: 0 32px;
+  }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

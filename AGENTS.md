@@ -1,22 +1,32 @@
-## Development
+# AGENTS.md
 
-When starting the dev server, use background mode:
+## Project
 
-```
-astro dev --background
-```
+This is a personal interest and activity tracking website.
 
-Manage the background server with `astro dev stop`, `astro dev status`, and `astro dev logs`.
+The site records:
+- what I was interested in
+- when I became interested in it
+- what actions I took
+- how my interests changed over time
 
-## Documentation
+The site is intended to be a long-term personal archive rather than a social network or productivity app.
 
-Full documentation: https://docs.astro.build
+## Tech Stack
 
-Consult these guides before working on related tasks:
+- Astro
+- TypeScript
+- Markdown / MDX when appropriate
+- GitHub Pages for deployment
+- npm for package management
 
-- [Adding pages, dynamic routes, or middleware](https://docs.astro.build/en/guides/routing/)
-- [Working with Astro components](https://docs.astro.build/en/basics/astro-components/)
-- [Using React, Vue, Svelte, or other framework components](https://docs.astro.build/en/guides/framework-components/)
-- [Adding or managing content](https://docs.astro.build/en/guides/content-collections/)
-- [Adding styles or using Tailwind](https://docs.astro.build/en/guides/styling/)
-- [Supporting multiple languages](https://docs.astro.build/en/guides/internationalization/)
+Avoid adding frontend frameworks such as React, Vue, or Svelte unless there is a clear need.
+
+## Data
+
+- Interests: `src/content/interests/<id>.md` (frontmatter: name, category, started, status, summary)
+- Action logs: `src/data/logs.yaml` (list of: date, interest, action, kind?, note?, url?)
+- Schemas live in `src/content.config.ts`. Dates are `YYYY-MM-DD` strings.
+- Period stats (week/month/year) are computed in the browser from embedded JSON, so the site does not need to be rebuilt daily. Weeks start on Monday.
+- Pure date/stat logic is in `src/lib/trail.ts` with tests in `src/lib/trail.test.ts` (`npm test`).
+- Use `url()` from `src/lib/url.ts` for internal links so the GitHub Pages base path works.

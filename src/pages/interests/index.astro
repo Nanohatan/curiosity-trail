@@ -1,0 +1,117 @@
+---
+import Base from '../../layouts/Base.astro';
+import { loadTrail, statusLabel } from '../../lib/data';
+import { url } from '../../lib/url';
+
+const { interests, logs } = await loadTrail();
+const stats = new Map<string, { count: number; last?: string }>();
+for (const l of logs) {
+  const s = stats.get(l.interest) ?? { count: 0 };
+  s.count += 1;
+  s.last = l.date;
+  stats.set(l.interest, s);
+}
+const groups = (['active', 'paused', 'done'] as const)
+  .map((status) => ({ status, items: interests.filter((i) => i.status === status) }))
+  .filter((g) => g.items.length > 0);
+const fmt = (iso?: string) => (iso ? iso.replaceAll('-', '.') : '—');
+---
+
+<Base title="ハマったもの">
+  <h1>ハマったもの</h1>
+  <p class="lede num">{interests.length} 個。新しく始めた順に並べています。</p>
+  {
+    groups.map((g) => (
+      <section aria-labelledby={`g-${g.status}`}>
+        <h2 id={`g-${g.status}`}>
+          {statusLabel[g.status]} <span class="n num">{g.items.length}</span>
+        </h2>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">名前</th>
+              <th scope="col">カテゴリ</th>
+              <th scope="col">始めた日</th>
+              <th scope="col">最後の記録</th>
+              <th scope="col" class="r">記録</th>
+            </tr>
+          </thead>
+          <tbody>
+            {g.items.map((i) => (
+              <tr>
+                <th scope="row"><a href={url(`interests/${i.id}/`)}>{i.name}</a></th>
+                <td>{i.category}</td>
+                <td class="num">{fmt(i.started)}</td>
+                <td class="num">{fmt(stats.get(i.id)?.last)}</td>
+                <td class="num r">{stats.get(i.id)?.count ?? 0}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+    ))
+  }
+</Base>
+
+<style>
+  h1 {
+    font-size: clamp(2rem, 6vw, 3.25rem);
+    font-weight: 800;
+    margin-top: 2.5rem;
+  }
+  .lede {
+    color: var(--muted);
+    margin: 0.5rem 0 2.5rem;
+  }
+  section {
+    margin-bottom: 3rem;
+  }
+  h2 {
+    font-size: var(--step-1);
+    margin-bottom: 0.75rem;
+  }
+  .n {
+    font-family: var(--sans);
+    font-weight: 400;
+    font-size: var(--step--1);
+    color: var(--muted);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--step--1);
+  }
+  thead th {
+    text-align: left;
+    font-weight: 500;
+    color: var(--muted);
+    border-bottom: 2px solid var(--ink);
+    padding: 0.4rem 0.5rem 0.4rem 0;
+  }
+  tbody th,
+  tbody td {
+    text-align: left;
+    padding: 0.7rem 0.5rem 0.7rem 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: baseline;
+  }
+  tbody th a {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: var(--step-0);
+    text-decoration: none;
+  }
+  tbody th a:hover {
+    text-decoration: underline;
+  }
+  .r {
+    text-align: right !important;
+    padding-right: 0 !important;
+  }
+  @media (max-width: 600px) {
+    thead th:nth-child(4),
+    tbody td:nth-child(4) {
+      display: none;
+    }
+  }
+</style>
