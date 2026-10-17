@@ -24,9 +24,9 @@ Avoid adding frontend frameworks such as React, Vue, or Svelte unless there is a
 
 ## Data
 
-- Interests: `src/content/interests/<id>.md` (frontmatter: name, category, started, status, summary)
-- Action logs: `src/data/logs.yaml` (list of: date, interest, action, kind?, note?, url?)
-- Schemas live in `src/content.config.ts`. Dates are `YYYY-MM-DD` strings.
-- Period stats (week/month/year) are computed in the browser from embedded JSON, so the site does not need to be rebuilt daily. Weeks start on Monday.
-- Pure date/stat logic is in `src/lib/trail.ts` with tests in `src/lib/trail.test.ts` (`npm test`).
+- Records come from a public Google Sheet (form responses), fetched in the browser as CSV via the gviz endpoint. See `src/lib/sheet.ts` (`SHEET_ID`, column matching by header text).
+- Columns: 名前, カテゴリ, 何をした？, 日付, 熱量, きっかけ. Interests are derived from logs (name = id).
+- Status is automatic: `dormant` when the last log is more than 1 month old, otherwise `active`.
+- Pages are static shells; `src/scripts/app.ts` loads the sheet and renders. Interest detail is `/interest/?name=…`.
+- Pure date/stat logic is in `src/lib/trail.ts` and `src/lib/sheet.ts` with tests (`npm test`).
 - Use `url()` from `src/lib/url.ts` for internal links so the GitHub Pages base path works.

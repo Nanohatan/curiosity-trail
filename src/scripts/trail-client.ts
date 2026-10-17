@@ -3,7 +3,6 @@ import {
   type Metric, type Period, type TrailInterest, type TrailLog, type DayBucket,
 } from '../lib/trail';
 
-type Payload = { logs: TrailLog[]; interests: TrailInterest[]; base: string };
 
 const WEEKDAYS = ['月', '火', '水', '木', '金', '土', '日'];
 const METRIC_TEXT: Record<Metric, { unit: string; caption: string }> = {
@@ -16,7 +15,7 @@ const PERIOD_TEXT: Record<Period, { prev: string }> = {
   year: { prev: '去年' },
 };
 
-function el<K extends keyof HTMLElementTagNameMap>(
+export function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   props: Partial<HTMLElementTagNameMap[K]> & { className?: string } = {},
   ...children: Array<Node | string | null | undefined>
@@ -27,7 +26,7 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
-function jpDate(iso: string, withWeekday = true): string {
+export function jpDate(iso: string, withWeekday = true): string {
   const [, m, d] = iso.split('-').map(Number);
   const wd = withWeekday ? `（${WEEKDAYS[weekday(toDay(iso))]}）` : '';
   return `${m}月${d}日${wd}`;
@@ -43,10 +42,11 @@ function store(key: string, value?: string): string | null {
   return null;
 }
 
-function init(root: HTMLElement) {
-  const json = root.querySelector<HTMLScriptElement>('[data-trail-json]');
-  if (!json) return;
-  const { logs, interests, base } = JSON.parse(json.textContent || '{}') as Payload;
+export function interestHref(base: string, name: string) {
+  return `${base}interest/?name=${encodeURIComponent(name)}`;
+}
+
+export function initTrail(root: HTMLElement, logs: TrailLog[], interests: TrailInterest[], base: string) {
   const interestById = new Map(interests.map((i) => [i.id, i]));
   const buckets = bucketByDay(logs);
   const today = todayIso();
@@ -75,9 +75,7 @@ function init(root: HTMLElement) {
     rangeSelect.append(el('option', { value: String(y), textContent: `${y}年` }));
   }
 
-  function interestHref(id: string) {
-    return `${base}interests/${id}/`;
-  }
+  const href = (id: string) => interestHref(base, id);
 
   function currentRange(): { start: number; end: number } {
     if (rangeSelect.value === 'recent') {
@@ -162,9 +160,7 @@ function init(root: HTMLElement) {
 
   function logItem(log: TrailLog, showDate: boolean) {
     const interest = interestById.get(log.interest);
-    const what = log.url
-      ? el('a', { href: log.url, textContent: log.action, rel: 'noopener' })
-      : log.action;
+    const what = log.action || '（記録のみ）';
     return el(
       'li',
       { className: 'log' },
@@ -176,11 +172,11 @@ function init(root: HTMLElement) {
         el(
           'p',
           { className: 'log-meta' },
-          el('a', { href: interestHref(log.interest), textContent: interest?.name ?? log.interest }),
+          el('a', { href: href(log.interest), textContent: interest?.name ?? log.interest }),
           el('span', { className: 'log-cat', textContent: log.category }),
-          log.kind ? el('span', { className: 'log-kind', textContent: log.kind }) : null,
+          log.heat ? el('span', { className: 'log-kind num', textContent: `熱量 ${log.heat}` }) : null,
         ),
-        log.note ? el('p', { className: 'log-note', textContent: log.note }) : null,
+        log.origin ? el('p', { className: 'log-note', textContent: `きっかけ：${log.origin}` }) : null,
       ),
     );
   }
@@ -326,7 +322,7 @@ function init(root: HTMLElement) {
         el('div', { className: 'breakdown' },
           bars('カテゴリ別', s.categories.map((c) => ({ label: c.name, count: c.count }))),
           bars('よく動いたハマりごと', s.interests.map((i) => ({
-            label: interestById.get(i.id)?.name ?? i.id, count: i.count, href: interestHref(i.id),
+            label: interestById.get(i.id)?.name ?? i.id, count: i.count, href: href(i.id),
           }))),
         ),
       );
@@ -353,4 +349,3 @@ function init(root: HTMLElement) {
   scrollToRecent();
 }
 
-document.querySelectorAll<HTMLElement>('[data-trail]').forEach(init);

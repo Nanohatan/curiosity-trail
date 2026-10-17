@@ -46,8 +46,8 @@ test('期間の統計', () => {
     L('2026-10-14', 'b', '運動'), L('2026-10-17', 'c', '本'), L('2026-10-05', 'a', '料理'),
   ];
   const interests = [
-    { id: 'a', name: 'A', category: '料理', started: '2026-01-01', status: 'active' as const },
-    { id: 'c', name: 'C', category: '本', started: '2026-10-16', status: 'active' as const },
+    { id: 'a', name: 'A', category: '料理', started: '2026-01-01', last: '2026-10-13', status: 'active' as const, count: 3 },
+    { id: 'c', name: 'C', category: '本', started: '2026-10-16', last: '2026-10-17', status: 'active' as const, count: 1 },
   ];
   const s = periodStats(logs, interests, 'week', '2026-10-17');
   assert.equal(s.actions, 5);

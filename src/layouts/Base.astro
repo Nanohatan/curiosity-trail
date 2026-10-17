@@ -8,11 +8,12 @@ interface Props {
 }
 const { title, description = '何にハマって、何をしたかの記録。' } = Astro.props;
 const fullTitle = title ? `${title} | curiosity trail` : 'curiosity trail';
+const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
 const path = Astro.url.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, ''), '') || '/';
 ---
 
 <!doctype html>
-<html lang="ja">
+<html lang="ja" data-base={base}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -31,14 +32,18 @@ const path = Astro.url.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, 
       <a class="site-name" href={url()}>curiosity trail</a>
       <nav aria-label="サイト内">
         <a href={url()} aria-current={path === '/' ? 'page' : undefined}>足跡</a>
-        <a href={url('interests/')} aria-current={path.startsWith('/interests') ? 'page' : undefined}>
+        <a href={url('interests/')} aria-current={path.startsWith('/interest') ? 'page' : undefined}>
           ハマったもの
         </a>
       </nav>
     </header>
     <main class="wrap">
       <slot />
+      <p class="load-status" data-load-status>読み込み中…</p>
     </main>
+    <script>
+      import '../scripts/app';
+    </script>
   </body>
 </html>
 
@@ -50,6 +55,10 @@ const path = Astro.url.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, 
     gap: 1rem;
     padding-top: 1.25rem;
     padding-bottom: 1.25rem;
+  }
+  .load-status {
+    color: var(--muted);
+    font-size: var(--step--1);
   }
   .site-name {
     font-family: var(--serif);

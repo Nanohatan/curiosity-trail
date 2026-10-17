@@ -1,44 +1,26 @@
 ---
 import Base from '../layouts/Base.astro';
 import Trail from '../components/Trail.astro';
-import { loadTrail, statusLabel } from '../lib/data';
 import { url } from '../lib/url';
-
-const { interests, logs } = await loadTrail();
-const counts = new Map<string, number>();
-for (const l of logs) counts.set(l.interest, (counts.get(l.interest) ?? 0) + 1);
-const active = interests.filter((i) => i.status === 'active');
-const categories = new Set(interests.map((i) => i.category));
 ---
 
 <Base>
   <div class="intro">
-    <h1>好奇心の足跡</h1>
+    <h1>突発的活動の足跡</h1>
     <p class="streak" data-streak hidden></p>
   </div>
 
-  <Trail logs={logs} interests={interests} stats />
+  <Trail stats />
 
   <section class="now" aria-labelledby="now-title">
     <h2 id="now-title">いまハマっているもの</h2>
-    <p class="now-sub num">これまでに {interests.length} 個、{categories.size} カテゴリ</p>
-    <ul class="interest-list">
-      {
-        active.map((i) => (
-          <li>
-            <a href={url(`interests/${i.id}/`)}>{i.name}</a>
-            <span class="cat">{i.category}</span>
-            <span class="since num">{i.started.replaceAll('-', '.')} から</span>
-            <span class="count num">{counts.get(i.id) ?? 0} 件</span>
-          </li>
-        ))
-      }
-    </ul>
-    <p><a href={url('interests/')}>{statusLabel.paused}・{statusLabel.done}のものも見る</a></p>
+    <p class="now-sub num" data-now-sub></p>
+    <ul class="interest-list" data-now-list></ul>
+    <p><a href={url('interests/')}>休眠中のものも見る</a></p>
   </section>
 </Base>
 
-<style>
+<style is:global>
   .intro {
     margin: 2.5rem 0 2rem;
   }

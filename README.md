@@ -5,38 +5,13 @@ GitHub の草のようなヒートマップで日々の動きを見て、今週�
 
 ## 記録のしかた
 
-### 1. ハマったものを追加する
+Google フォームに書くと、回答のスプレッドシートにたまり、サイトを開いたときにブラウザが直接読み込む（再ビルド不要）。
 
-`src/content/interests/<id>.md` を 1 つ作る。ファイル名（拡張子なし）が id になり、URL にも使われる（英数字とハイフン推奨）。
-
-```md
----
-name: サワードウ          # 表示名
-category: 料理            # カテゴリ。草の「カテゴリ数」はこれで数える
-started: 2026-01-11       # ハマり始めた日
-status: active            # active（ハマり中） / paused（休憩中） / done（卒業）
-summary: 自家製の酵母でパンを焼く。   # 任意。一行の説明
----
-
-ここから下は自由に書けるメモ。個別ページに表示される。
-```
-
-### 2. 行動を記録する
-
-`src/data/logs.yaml` の末尾に追記する。
-
-```yaml
-- date: 2026-10-17
-  interest: sourdough      # 上で作ったファイルの id
-  action: カンパーニュを焼いた
-  kind: 作った             # 任意。読んだ / 行った / 買った / 作った など
-  note: 加水率を 75% にした  # 任意
-  url: https://example.com # 任意。action がリンクになる
-```
-
-存在しない `interest` を書くとビルドが失敗するので、打ち間違いに気づける。
-
-> いま入っているのはサンプルデータ。`src/content/interests/` と `src/data/logs.yaml` の中身を自分の記録に置き換えて使う。
+- シート: `src/lib/sheet.ts` の `SHEET_ID`（「リンクを知っている全員が閲覧可」にしておく）
+- 使う列: 名前 / カテゴリ / 何をした？ / 日付 / 熱量 / きっかけ（見出しの文字で探すので並び順は自由）
+- 日付が空の行はタイムスタンプの日付を使う
+- 状態は自動: 最後の記録から 1 か月たつと「休眠中」、それまでは「ハマり中」
+- 個別ページは `/interest/?name=名前`
 
 ## 草の色
 
@@ -67,10 +42,9 @@ URL（`https://<ユーザー名>.github.io/<リポジトリ名>/`）は Actions 
 
 ```text
 src/
-├── content/interests/*.md   ハマったもの（1 ファイル 1 つ）
-├── data/logs.yaml           行動の記録
-├── content.config.ts        データの形（スキーマ）
+├── lib/sheet.ts             スプレッドシートの読み込み（テストあり）
 ├── lib/trail.ts             日付・集計の計算（テストあり）
+├── scripts/app.ts           読み込みとページの描画
 ├── scripts/trail-client.ts  草と振り返りの描画
 ├── components/Trail.astro   草のコンポーネント
 └── pages/                   トップ / 一覧 / 個別ページ

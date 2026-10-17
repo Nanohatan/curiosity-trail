@@ -2,20 +2,23 @@
 
 export type TrailLog = {
   date: string; // YYYY-MM-DD
-  interest: string;
+  interest: string; // ハマりごとの名前（＝id）
   category: string;
   action: string;
-  kind?: string;
-  note?: string;
-  url?: string;
+  heat?: number; // 熱量 1〜5
+  origin?: string; // きっかけ
 };
 
 export type TrailInterest = {
   id: string;
   name: string;
   category: string;
-  started: string;
-  status: 'active' | 'paused' | 'done';
+  started: string; // 最初の記録の日
+  last: string; // 最後の記録の日
+  status: 'active' | 'dormant';
+  origin?: string;
+  heat?: number; // 最新の熱量
+  count: number;
 };
 
 export type Period = 'week' | 'month' | 'year';

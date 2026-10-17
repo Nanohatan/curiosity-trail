@@ -1,21 +1,14 @@
 ---
-import type { TrailInterest, TrailLog } from '../lib/trail';
-import { embedJson } from '../lib/data';
-
 interface Props {
-  logs: TrailLog[];
-  interests: TrailInterest[];
   /** 今週・今月・今年の統計を出すか */
   stats?: boolean;
   label?: string;
 }
-const { logs, interests, stats = false, label = '日ごとの記録' } = Astro.props;
-const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+const { stats = false, label = '日ごとの記録' } = Astro.props;
 const uid = Math.random().toString(36).slice(2, 8);
 ---
 
-<section class="trail" data-trail>
-  <script type="application/json" data-trail-json set:html={embedJson({ logs, interests, base })} />
+<section class="trail" data-trail hidden>
 
   <div class="controls">
     <fieldset class="metric">
@@ -71,9 +64,6 @@ const uid = Math.random().toString(36).slice(2, 8);
   }
 </section>
 
-<script>
-  import '../scripts/trail-client';
-</script>
 
 <style is:global>
   .trail {

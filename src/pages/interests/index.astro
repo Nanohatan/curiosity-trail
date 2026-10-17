@@ -1,59 +1,14 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { loadTrail, statusLabel } from '../../lib/data';
-import { url } from '../../lib/url';
-
-const { interests, logs } = await loadTrail();
-const stats = new Map<string, { count: number; last?: string }>();
-for (const l of logs) {
-  const s = stats.get(l.interest) ?? { count: 0 };
-  s.count += 1;
-  s.last = l.date;
-  stats.set(l.interest, s);
-}
-const groups = (['active', 'paused', 'done'] as const)
-  .map((status) => ({ status, items: interests.filter((i) => i.status === status) }))
-  .filter((g) => g.items.length > 0);
-const fmt = (iso?: string) => (iso ? iso.replaceAll('-', '.') : '—');
 ---
 
 <Base title="ハマったもの">
   <h1>ハマったもの</h1>
-  <p class="lede num">{interests.length} 個</p>
-  {
-    groups.map((g) => (
-      <section aria-labelledby={`g-${g.status}`}>
-        <h2 id={`g-${g.status}`}>
-          {statusLabel[g.status]} <span class="n num">{g.items.length}</span>
-        </h2>
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">名前</th>
-              <th scope="col">カテゴリ</th>
-              <th scope="col">始めた日</th>
-              <th scope="col">最後の記録</th>
-              <th scope="col" class="r">記録</th>
-            </tr>
-          </thead>
-          <tbody>
-            {g.items.map((i) => (
-              <tr>
-                <th scope="row"><a href={url(`interests/${i.id}/`)}>{i.name}</a></th>
-                <td>{i.category}</td>
-                <td class="num">{fmt(i.started)}</td>
-                <td class="num">{fmt(stats.get(i.id)?.last)}</td>
-                <td class="num r">{stats.get(i.id)?.count ?? 0}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-    ))
-  }
+  <p class="lede num" data-list-lede></p>
+  <div data-interest-table></div>
 </Base>
 
-<style>
+<style is:global>
   h1 {
     font-size: clamp(2rem, 6vw, 3.25rem);
     font-weight: 800;
