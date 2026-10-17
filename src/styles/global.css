@@ -16,8 +16,8 @@
   --cat-3: #b14d8d;
   --cat-4: #771e59;
 
-  --serif: 'Shippori Mincho', 'Hiragino Mincho ProN', serif;
-  --sans: 'Zen Kaku Gothic New', 'Hiragino Sans', system-ui, sans-serif;
+  --serif: 'Yusei Magic', 'Hiragino Sans', system-ui, sans-serif;
+  --sans: 'Yusei Magic', 'Hiragino Sans', system-ui, sans-serif;
 
   --step--1: 0.8125rem;
   --step-0: 1rem;
@@ -69,6 +69,7 @@ body {
   font-size: var(--step-0);
   line-height: 1.7;
   font-feature-settings: 'palt' 0;
+  font-synthesis: none;
 }
 
 a {

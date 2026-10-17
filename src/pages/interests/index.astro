@@ -19,7 +19,7 @@ const fmt = (iso?: string) => (iso ? iso.replaceAll('-', '.') : '—');
 
 <Base title="ハマったもの">
   <h1>ハマったもの</h1>
-  <p class="lede num">{interests.length} 個。新しく始めた順に並べています。</p>
+  <p class="lede num">{interests.length} 個</p>
   {
     groups.map((g) => (
       <section aria-labelledby={`g-${g.status}`}>

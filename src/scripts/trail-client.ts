@@ -191,7 +191,7 @@ function init(root: HTMLElement) {
       const recent = logs.slice(-5).reverse();
       detail.append(el('h3', { textContent: '最近の記録' }));
       if (recent.length === 0) {
-        detail.append(el('p', { className: 'empty', textContent: 'まだ記録がありません。src/data/logs.yaml に書き足すと、ここに並びます。' }));
+        detail.append(el('p', { className: 'empty', textContent: 'まだ記録がありません。' }));
         return;
       }
       detail.append(el('ul', { className: 'logs' }, ...recent.map((l) => logItem(l, true))));
