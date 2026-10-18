@@ -2,7 +2,7 @@
 import { layoutCloud, sizeScale } from '../lib/cloud';
 import { loadSheet, statusLabel } from '../lib/sheet';
 import { todayIso, type TrailInterest, type TrailLog } from '../lib/trail';
-import { el, initTrail, interestHref } from './trail-client';
+import { el, initTrail, interestHref, jpDate } from './trail-client';
 
 const base = document.documentElement.dataset.base ?? '/';
 const fmt = (iso?: string) => (iso ? iso.replaceAll('-', '.') : '—');
@@ -88,7 +88,67 @@ function renderDetail(target: HTMLElement, interest: TrailInterest | undefined, 
       fact('最後の記録', fmt(interest.last)),
       fact('熱量', interest.heat ? `${interest.heat} / 5` : '—'),
     ),
+    heatChart(logs) ?? '',
   );
+}
+
+/** 記録ごとの熱量を古い順に並べた棒グラフ。熱量が 1 件もなければ出さない。 */
+function heatChart(logs: TrailLog[]): HTMLElement | null {
+  const rows = logs.filter((l) => l.heat !== undefined);
+  if (rows.length === 0) return null;
+  const MAX = 5;
+  const tip = el('div', { className: 'heat-tip', role: 'status' });
+  tip.hidden = true;
+  const plot = el('div', { className: 'heat-plot' });
+  const wrap = el('div', { className: 'heat-wrap' });
+
+  const show = (bar: HTMLElement, text: string) => {
+    tip.textContent = text;
+    tip.hidden = false;
+    // 吹き出しが枠からはみ出さないよう、端では内側に寄せる
+    const wr = wrap.getBoundingClientRect();
+    const br = bar.getBoundingClientRect();
+    const half = tip.offsetWidth / 2;
+    const x = br.left - wr.left + br.width / 2;
+    tip.style.left = `${Math.min(Math.max(x, half), Math.max(half, wr.width - half))}px`;
+  };
+  const hide = () => (tip.hidden = true);
+
+  const bars = el('ol', { className: 'heat-bars' },
+    ...rows.map((l) => {
+      const label = `${jpDate(l.date)} 熱量 ${l.heat}${l.action ? `｜${l.action}` : ''}`;
+      const bar = el('li', { className: 'heat-bar', tabIndex: 0, ariaLabel: label });
+      bar.style.setProperty('--h', `${(Math.min(l.heat!, MAX) / MAX) * 100}%`);
+      bar.addEventListener('mouseenter', () => show(bar, label));
+      bar.addEventListener('focus', () => show(bar, label));
+      bar.addEventListener('mouseleave', hide);
+      bar.addEventListener('blur', hide);
+      return bar;
+    }),
+  );
+  plot.append(bars);
+  wrap.append(plot, tip);
+
+  const axis = el('div', { className: 'heat-axis num', ariaHidden: 'true' },
+    ...[5, 4, 3, 2, 1].map((n) => {
+      const t = el('span', { textContent: String(n) });
+      t.style.setProperty('--y', `${(n / MAX) * 100}%`);
+      return t;
+    }),
+  );
+  const first = rows[0].date;
+  const last = rows.at(-1)!.date;
+  const sec = el('section', { className: 'heat', ariaLabel: '熱量の変化' },
+    el('h2', { textContent: '熱量の変化' }),
+    el('div', { className: 'heat-chart' }, axis, wrap),
+    el('p', { className: 'heat-dates num' },
+      el('span', { textContent: jpDate(first, false) }),
+      first !== last ? el('span', { textContent: jpDate(last, false) }) : null,
+    ),
+  );
+  // 棒は 1 本 30px まで。記録が少ないときはグラフ自体を詰めて、日付を棒の両端に合わせる
+  sec.style.setProperty('--n', String(rows.length));
+  return sec;
 }
 
 const SVG = 'http://www.w3.org/2000/svg';
