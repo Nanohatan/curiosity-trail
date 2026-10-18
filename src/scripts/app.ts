@@ -1,7 +1,7 @@
 // ページを開いたときにシートを読み、草・一覧・個別ページを描く。
 import { layoutCloud, sizeScale } from '../lib/cloud';
 import { loadSheet, statusLabel } from '../lib/sheet';
-import { todayIso, type TrailInterest, type TrailLog } from '../lib/trail';
+import { fromDay, toDay, todayIso, type TrailInterest, type TrailLog } from '../lib/trail';
 import { el, initTrail, interestHref, jpDate } from './trail-client';
 
 const base = document.documentElement.dataset.base ?? '/';
@@ -88,66 +88,115 @@ function renderDetail(target: HTMLElement, interest: TrailInterest | undefined, 
       fact('最後の記録', fmt(interest.last)),
       fact('熱量', interest.heat ? `${interest.heat} / 5` : '—'),
     ),
-    heatChart(logs) ?? '',
   );
 }
 
-/** 記録ごとの熱量を古い順に並べた棒グラフ。熱量が 1 件もなければ出さない。 */
+/** 熱量の折れ線グラフ。横軸は日付。熱量が 1 件もなければ出さない。 */
 function heatChart(logs: TrailLog[]): HTMLElement | null {
   const rows = logs.filter((l) => l.heat !== undefined);
   if (rows.length === 0) return null;
   const MAX = 5;
-  const tip = el('div', { className: 'heat-tip', role: 'status' });
-  tip.hidden = true;
-  const plot = el('div', { className: 'heat-plot' });
+  const H = 160; // 描画領域の高さ（px）
+  const PAD = { top: 10, right: 10, bottom: 24, left: 24 };
+
   const wrap = el('div', { className: 'heat-wrap' });
-
-  const show = (bar: HTMLElement, text: string) => {
-    tip.textContent = text;
-    tip.hidden = false;
-    // 吹き出しが枠からはみ出さないよう、端では内側に寄せる
-    const wr = wrap.getBoundingClientRect();
-    const br = bar.getBoundingClientRect();
-    const half = tip.offsetWidth / 2;
-    const x = br.left - wr.left + br.width / 2;
-    tip.style.left = `${Math.min(Math.max(x, half), Math.max(half, wr.width - half))}px`;
-  };
-  const hide = () => (tip.hidden = true);
-
-  const bars = el('ol', { className: 'heat-bars' },
-    ...rows.map((l) => {
-      const label = `${jpDate(l.date)} 熱量 ${l.heat}${l.action ? `｜${l.action}` : ''}`;
-      const bar = el('li', { className: 'heat-bar', tabIndex: 0, ariaLabel: label });
-      bar.style.setProperty('--h', `${(Math.min(l.heat!, MAX) / MAX) * 100}%`);
-      bar.addEventListener('mouseenter', () => show(bar, label));
-      bar.addEventListener('focus', () => show(bar, label));
-      bar.addEventListener('mouseleave', hide);
-      bar.addEventListener('blur', hide);
-      return bar;
-    }),
-  );
-  plot.append(bars);
-  wrap.append(plot, tip);
-
-  const axis = el('div', { className: 'heat-axis num', ariaHidden: 'true' },
-    ...[5, 4, 3, 2, 1].map((n) => {
-      const t = el('span', { textContent: String(n) });
-      t.style.setProperty('--y', `${(n / MAX) * 100}%`);
-      return t;
-    }),
-  );
-  const first = rows[0].date;
-  const last = rows.at(-1)!.date;
+  const tip = el('div', { className: 'heat-tip' });
+  tip.hidden = true;
   const sec = el('section', { className: 'heat', ariaLabel: '熱量の変化' },
-    el('h2', { textContent: '熱量の変化' }),
-    el('div', { className: 'heat-chart' }, axis, wrap),
-    el('p', { className: 'heat-dates num' },
-      el('span', { textContent: jpDate(first, false) }),
-      first !== last ? el('span', { textContent: jpDate(last, false) }) : null,
-    ),
+    el('h3', { textContent: '熱量の変化' }),
+    wrap,
   );
-  // 棒は 1 本 30px まで。記録が少ないときはグラフ自体を詰めて、日付を棒の両端に合わせる
-  sec.style.setProperty('--n', String(rows.length));
+
+  const days = rows.map((l) => toDay(l.date));
+  const d0 = days[0];
+  const d1 = days.at(-1)!;
+
+  function draw() {
+    const W = Math.max(240, wrap.clientWidth);
+    const iw = W - PAD.left - PAD.right;
+    const ih = H - PAD.top - PAD.bottom;
+    const xOf = (d: number) => PAD.left + (d1 === d0 ? iw / 2 : ((d - d0) / (d1 - d0)) * iw);
+    const yOf = (v: number) => PAD.top + ih - (v / MAX) * ih;
+    const pts = rows.map((l, i) => ({ l, x: xOf(days[i]), y: yOf(l.heat!) }));
+
+    const root = svg('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `熱量の変化：${rows.map((l) => `${jpDate(l.date, false)} ${l.heat}`).join('、')}` });
+    // 目盛り線と数字（1〜5）
+    for (let v = 1; v <= MAX; v++) {
+      root.append(svg('line', { class: 'heat-grid', x1: PAD.left, x2: W - PAD.right, y1: yOf(v), y2: yOf(v) }));
+      const t = svg('text', { class: 'heat-label', x: PAD.left - 8, y: yOf(v), 'text-anchor': 'end', 'dominant-baseline': 'central' });
+      t.textContent = String(v);
+      root.append(t);
+    }
+    root.append(svg('line', { class: 'heat-base', x1: PAD.left, x2: W - PAD.right, y1: yOf(0), y2: yOf(0) }));
+    // 最初と最後の日付
+    const dateLabel = (d: number, anchor: string) => {
+      const t = svg('text', { class: 'heat-label', x: xOf(d), y: H - 6, 'text-anchor': anchor });
+      t.textContent = jpDate(fromDay(d), false);
+      root.append(t);
+    };
+    dateLabel(d0, d1 === d0 ? 'middle' : 'start');
+    if (d1 !== d0) dateLabel(d1, 'end');
+
+    const cross = svg('line', { class: 'heat-cross', y1: PAD.top, y2: PAD.top + ih, x1: 0, x2: 0, visibility: 'hidden' });
+    root.append(cross);
+    if (pts.length > 1) {
+      root.append(svg('polyline', { class: 'heat-line', points: pts.map((p) => `${p.x},${p.y}`).join(' ') }));
+    }
+    const dots = pts.map((p) => {
+      const c = svg('circle', { class: 'heat-dot', cx: p.x, cy: p.y, r: 4 });
+      root.append(c);
+      return c;
+    });
+
+    // いちばん近い点を拾って吹き出しを出す
+    let active = -1;
+    const focus = (i: number) => {
+      if (i === active) return;
+      if (active >= 0) dots[active].setAttribute('r', '4');
+      active = i;
+      if (i < 0) {
+        tip.hidden = true;
+        cross.setAttribute('visibility', 'hidden');
+        return;
+      }
+      const p = pts[i];
+      dots[i].setAttribute('r', '6');
+      cross.setAttribute('x1', String(p.x));
+      cross.setAttribute('x2', String(p.x));
+      cross.setAttribute('visibility', 'visible');
+      tip.textContent = `${jpDate(p.l.date)} 熱量 ${p.l.heat}${p.l.action ? `｜${p.l.action}` : ''}`;
+      tip.hidden = false;
+      const half = tip.offsetWidth / 2;
+      tip.style.left = `${Math.min(Math.max(p.x, half), Math.max(half, W - half))}px`;
+    };
+    const nearest = (clientX: number) => {
+      const x = clientX - root.getBoundingClientRect().left;
+      let best = 0;
+      for (let i = 1; i < pts.length; i++) if (Math.abs(pts[i].x - x) < Math.abs(pts[best].x - x)) best = i;
+      return best;
+    };
+    root.addEventListener('pointermove', (e) => focus(nearest(e.clientX)));
+    root.addEventListener('pointerleave', () => focus(-1));
+    root.tabIndex = 0;
+    root.addEventListener('focus', () => focus(pts.length - 1));
+    root.addEventListener('blur', () => focus(-1));
+    root.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') focus(Math.max(0, active - 1));
+      else if (e.key === 'ArrowRight') focus(Math.min(pts.length - 1, active + 1));
+      else return;
+      e.preventDefault();
+    });
+    wrap.replaceChildren(root, tip);
+  }
+
+  // 幅が決まってから描き、画面幅が変わったら描き直す
+  let lastW = 0;
+  new ResizeObserver(() => {
+    if (wrap.clientWidth !== lastW) {
+      lastW = wrap.clientWidth;
+      draw();
+    }
+  }).observe(wrap);
   return sec;
 }
 
@@ -278,6 +327,12 @@ async function main() {
     document.querySelectorAll<HTMLElement>('[data-trail]').forEach((root) => {
       root.hidden = detail ? scopedInterests.length === 0 : false;
       initTrail(root, scoped, scopedInterests, base);
+      // 個別ページでは、熱量のグラフを「最近の記録」の上に置く
+      if (detail) {
+        const chart = heatChart(scoped);
+        const recent = root.querySelector('[data-detail]');
+        if (chart && recent) recent.before(chart);
+      }
     });
 
     const now = document.querySelector<HTMLElement>('[data-now-list]');
