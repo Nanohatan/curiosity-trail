@@ -1,0 +1,104 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+
+<Base title="読書予定メモ">
+  <h1>読書予定メモ</h1>
+  <p class="lede num" data-books-lede></p>
+  <ul class="shelf" data-books></ul>
+</Base>
+
+<style is:global>
+  h1 {
+    font-size: clamp(2rem, 6vw, 3.25rem);
+    margin-top: 2.5rem;
+  }
+  .lede {
+    color: var(--muted);
+    margin: 0.5rem 0 2rem;
+  }
+  .shelf {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    gap: 2rem 1.5rem;
+  }
+  @media (max-width: 480px) {
+    .shelf {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.5rem 1rem;
+    }
+  }
+  .book a {
+    display: block;
+    text-decoration: none;
+  }
+  .book-cover {
+    display: block;
+    position: relative;
+    aspect-ratio: 2 / 3;
+    border-radius: 3px 6px 6px 3px;
+    overflow: hidden;
+    background: var(--surface);
+    box-shadow:
+      inset 4px 0 0 rgb(0 0 0 / 0.08),
+      0 1px 2px rgb(0 0 0 / 0.12),
+      0 6px 14px -6px rgb(0 0 0 / 0.25);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .book a:hover .book-cover,
+  .book a:focus-visible .book-cover {
+    transform: translateY(-4px) rotate(-1deg);
+    box-shadow:
+      inset 4px 0 0 rgb(0 0 0 / 0.08),
+      0 2px 4px rgb(0 0 0 / 0.12),
+      0 14px 24px -8px rgb(0 0 0 / 0.3);
+  }
+  .book-cover img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity 0.3s;
+  }
+  /* 書影が無い本は、色の付いた表紙に縦書きでタイトルを出す */
+  .book-plain {
+    position: absolute;
+    inset: 0;
+    display: block;
+    padding: 1.25rem 1.1rem;
+    background: var(--c);
+    color: #fff;
+    writing-mode: vertical-rl;
+    font-size: var(--step-1);
+    line-height: 1.5;
+    letter-spacing: 0.06em;
+    overflow: hidden;
+  }
+  .book-plain::before {
+    content: '';
+    position: absolute;
+    inset: 0.5rem 0.5rem auto auto;
+    width: calc(100% - 1rem);
+    height: calc(100% - 1rem);
+    border: 1px solid rgb(255 255 255 / 0.35);
+    border-radius: 2px;
+  }
+  .book-title {
+    margin: 0.75rem 0 0.15rem;
+    font-size: var(--step-0);
+    line-height: 1.4;
+  }
+  .book a:hover .book-title {
+    text-decoration: underline;
+  }
+  .book-meta {
+    margin: 0;
+    font-size: var(--step--1);
+    color: var(--muted);
+    line-height: 1.5;
+  }
+</style>

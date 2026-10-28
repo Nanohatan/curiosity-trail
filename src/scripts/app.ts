@@ -1,4 +1,5 @@
 // ページを開いたときにシートを読み、草・一覧・個別ページを描く。
+import { bookLink, coverUrl, loadBooks, type Book } from '../lib/books';
 import { layoutCloud, sizeScale } from '../lib/cloud';
 import { loadSheet, statusLabel } from '../lib/sheet';
 import { fromDay, toDay, todayIso, type TrailInterest, type TrailLog } from '../lib/trail';
@@ -312,8 +313,55 @@ function renderCategories(target: HTMLElement, cats: CatSummary[]) {
   );
 }
 
+function renderBooks(target: HTMLElement, books: Book[]) {
+  const lede = document.querySelector<HTMLElement>('[data-books-lede]');
+  if (lede) lede.textContent = `${books.length} 冊`;
+  if (books.length === 0) {
+    target.replaceWith(el('p', { className: 'empty', textContent: 'まだ本がありません。' }));
+    return;
+  }
+  target.replaceChildren(
+    ...books.map((b, idx) => {
+      const plain = el('span', { className: 'book-plain', textContent: b.title, ariaHidden: 'true' });
+      const cover = el('span', { className: 'book-cover' }, plain);
+      cover.style.setProperty('--c', `var(--wc-${(idx % 8) + 1})`);
+      if (/^\d{13}$/.test(b.isbn)) {
+        // 書影が読めたときだけ、色の表紙の上に重ねる
+        const img = el('img', { src: coverUrl(b.isbn), alt: '', loading: 'lazy', decoding: 'async' });
+        // display:none だと遅延読み込みが始まらないので、透明にして待つ
+        img.style.opacity = '0';
+        img.addEventListener('load', () => {
+          if (img.naturalWidth > 1) img.style.opacity = '1';
+          else img.remove();
+        });
+        img.addEventListener('error', () => img.remove());
+        cover.append(img);
+      }
+      const meta = [b.authors.join('／'), [b.publisher, b.published].filter(Boolean).join('・')].filter(Boolean);
+      return el('li', { className: 'book' },
+        el('a', { href: bookLink(b), target: '_blank', rel: 'noopener' },
+          cover,
+          el('p', { className: 'book-title', textContent: b.title }),
+          ...meta.map((m) => el('p', { className: 'book-meta', textContent: m })),
+        ),
+      );
+    }),
+  );
+}
+
 async function main() {
   const status = document.querySelector<HTMLElement>('[data-load-status]');
+  const shelf = document.querySelector<HTMLElement>('[data-books]');
+  if (shelf) {
+    try {
+      renderBooks(shelf, await loadBooks());
+      status?.remove();
+    } catch (e) {
+      console.error(e);
+      if (status) status.textContent = '本の一覧を読み込めませんでした。時間をおいて開き直してください。';
+    }
+    return;
+  }
   try {
     const { logs, interests } = await loadSheet(todayIso());
     status?.remove();
