@@ -1,6 +1,6 @@
-// 「読みたい本メモ」タブ（ISBN・タイトル・作者・出版社・出版年月）を読む。
+// 「読みたい本メモ」タブ（ISBN・タイトル・作者・出版社・出版年月・読み終わり）を読む。
 
-import { SHEET_ID, parseCsv } from './sheet.ts';
+import { SHEET_ID, normalizeDate, parseCsv } from './sheet.ts';
 
 /** 「読みたい本メモ」タブの gid（URL の #gid=… の数字） */
 export const BOOKS_GID = '593709678';
@@ -11,10 +11,26 @@ export type Book = {
   authors: string[];
   publisher?: string;
   published?: string; // 「2015年4月」など
+  done: boolean; // 読み終わったか
+  doneDate?: string; // 読み終わった日 YYYY-MM-DD（日付が書いてあれば）
 };
 
 export function booksCsvUrl(id = SHEET_ID, gid = BOOKS_GID): string {
   return `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${gid}`;
+}
+
+/**
+ * 「読み終わり」列の値を読む。日付なら読了日つき、TRUE・✓・済などなら読了、空・FALSE なら未読。
+ * 日付は 2026/11/01・2026-11-01・11/1/2026 のどれでもよい。
+ */
+export function parseDone(raw: string): { done: boolean; doneDate?: string } {
+  const v = raw.trim();
+  if (!v || /^(false|no|いいえ|未|未読|-|ー)$/i.test(v)) return { done: false };
+  const iso = normalizeDate(v);
+  if (iso) return { done: true, doneDate: iso };
+  const us = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (us) return { done: true, doneDate: `${us[3]}-${us[1].padStart(2, '0')}-${us[2].padStart(2, '0')}` };
+  return { done: true };
 }
 
 /** ISBN-10 / ISBN-13（ハイフンあり・なし）を ISBN-13 の数字だけに。読めなければ null。 */
@@ -59,10 +75,12 @@ export function rowsToBooks(rows: string[][]): Book[] {
     author: find('作者', '著者'),
     publisher: find('出版社'),
     published: find('出版年', '発行'),
+    done: find('読み終', '終'),
   };
-  // 出版社・出版年月の見出しが空なら、作者の右隣の列から順に使う
-  if (col.publisher < 0 && col.author >= 0) col.publisher = col.author + 1;
-  if (col.published < 0 && col.publisher >= 0) col.published = col.publisher + 1;
+  // 出版社・出版年月の見出しが空なら、作者の右隣の列から順に使う（読み終わり列は飛ばす）
+  const next = (i: number) => (i + 1 === col.done ? i + 2 : i + 1);
+  if (col.publisher < 0 && col.author >= 0) col.publisher = next(col.author);
+  if (col.published < 0 && col.publisher >= 0) col.published = next(col.publisher);
   const get = (r: string[], i: number) => (i >= 0 ? (r[i] ?? '').trim() : '');
 
   const books: Book[] = [];
@@ -76,6 +94,7 @@ export function rowsToBooks(rows: string[][]): Book[] {
       authors: parseAuthors(get(r, col.author)),
       publisher: get(r, col.publisher) || undefined,
       published: formatPublished(get(r, col.published)),
+      ...parseDone(get(r, col.done)),
     });
   }
   return books;
@@ -87,7 +106,6 @@ export async function loadBooks(): Promise<Book[]> {
   return rowsToBooks(parseCsv(await res.text()));
 }
 
-/** 国立国会図書館サーチの書影。無い本もある。 */
-export const coverUrl = (isbn13: string) => `https://ndlsearch.ndl.go.jp/thumbnail/${isbn13}.jpg`;
+/** 国立国会図書館サーチで、その本を探すリンク。 */
 export const bookLink = (b: Book) =>
   `https://ndlsearch.ndl.go.jp/search?cs=bib&keyword=${encodeURIComponent(/^\d{13}$/.test(b.isbn) ? b.isbn : b.title)}`;

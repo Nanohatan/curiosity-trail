@@ -1,5 +1,5 @@
 // ページを開いたときにシートを読み、草・一覧・個別ページを描く。
-import { bookLink, coverUrl, loadBooks, type Book } from '../lib/books';
+import { bookLink, loadBooks, type Book } from '../lib/books';
 import { layoutCloud, sizeScale } from '../lib/cloud';
 import { loadSheet, statusLabel } from '../lib/sheet';
 import { fromDay, toDay, todayIso, type TrailInterest, type TrailLog } from '../lib/trail';
@@ -315,35 +315,26 @@ function renderCategories(target: HTMLElement, cats: CatSummary[]) {
 
 function renderBooks(target: HTMLElement, books: Book[]) {
   const lede = document.querySelector<HTMLElement>('[data-books-lede]');
-  if (lede) lede.textContent = `${books.length} 冊`;
   if (books.length === 0) {
     target.replaceWith(el('p', { className: 'empty', textContent: 'まだ本がありません。' }));
     return;
   }
+  const read = books.filter((b) => b.done).length;
+  if (lede) lede.textContent = `${books.length} 冊（読み終わり ${read} 冊）`;
   target.replaceChildren(
-    ...books.map((b, idx) => {
-      const plain = el('span', { className: 'book-plain', textContent: b.title, ariaHidden: 'true' });
-      const cover = el('span', { className: 'book-cover' }, plain);
-      cover.style.setProperty('--c', `var(--wc-${(idx % 8) + 1})`);
-      if (/^\d{13}$/.test(b.isbn)) {
-        // 書影が読めたときだけ、色の表紙の上に重ねる
-        const img = el('img', { src: coverUrl(b.isbn), alt: '', loading: 'lazy', decoding: 'async' });
-        // display:none だと遅延読み込みが始まらないので、透明にして待つ
-        img.style.opacity = '0';
-        img.addEventListener('load', () => {
-          if (img.naturalWidth > 1) img.style.opacity = '1';
-          else img.remove();
-        });
-        img.addEventListener('error', () => img.remove());
-        cover.append(img);
-      }
-      const meta = [b.authors.join('／'), [b.publisher, b.published].filter(Boolean).join('・')].filter(Boolean);
-      return el('li', { className: 'book' },
-        el('a', { href: bookLink(b), target: '_blank', rel: 'noopener' },
-          cover,
-          el('p', { className: 'book-title', textContent: b.title }),
-          ...meta.map((m) => el('p', { className: 'book-meta', textContent: m })),
+    ...books.map((b) => {
+      const check = el('span', { className: 'book-check', ariaHidden: 'true' });
+      check.innerHTML = '<svg viewBox="0 0 16 16" width="16" height="16"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      return el('li', { className: b.done ? 'is-done' : '' },
+        check,
+        el('div', { className: 'book-main' },
+          el('a', { className: 'book-title', href: bookLink(b), target: '_blank', rel: 'noopener', textContent: b.title }),
+          b.done
+            ? el('span', { className: 'book-done num', textContent: b.doneDate ? `${fmt(b.doneDate)} 終` : '終' })
+            : null,
         ),
+        el('span', { className: 'book-author', textContent: b.authors.join('／') }),
+        el('span', { className: 'book-pub num', textContent: [b.publisher, b.published].filter(Boolean).join('・') }),
       );
     }),
   );
