@@ -34,7 +34,7 @@ function renderNow(target: HTMLElement, interests: TrailInterest[]) {
 function renderTable(target: HTMLElement, interests: TrailInterest[]) {
   const lede = document.querySelector<HTMLElement>('[data-list-lede]');
   if (lede) lede.textContent = `${interests.length} 個`;
-  const groups = (['active', 'dormant'] as const)
+  const groups = (['active', 'dormant', 'closed'] as const)
     .map((status) => ({ status, items: interests.filter((i) => i.status === status) }))
     .filter((g) => g.items.length > 0);
   target.replaceChildren(
@@ -51,7 +51,10 @@ function renderTable(target: HTMLElement, interests: TrailInterest[]) {
           el('tbody', {},
             ...g.items.map((i) =>
               el('tr', {},
-                el('th', { scope: 'row' }, el('a', { href: interestHref(base, i.id), textContent: i.name })),
+                el('th', { scope: 'row' },
+                  el('a', { href: interestHref(base, i.id), textContent: i.name }),
+                  i.closedReason ? el('span', { className: 'close-reason', textContent: i.closedReason }) : null,
+                ),
                 el('td', { textContent: i.category }),
                 el('td', { className: 'num', textContent: fmt(i.started) }),
                 el('td', { className: 'num', textContent: fmt(i.last) }),
@@ -79,9 +82,10 @@ function renderDetail(target: HTMLElement, interest: TrailInterest | undefined, 
       el('p', { className: 'meta' },
         el('span', { textContent: interest.category }),
         el('span', { className: `status status-${interest.status}`, textContent: statusLabel[interest.status] }),
-        el('span', { className: 'num', textContent: `${fmt(interest.started)} から` }),
+        el('span', { className: 'num', textContent: interest.closed ? `${fmt(interest.started)} 〜 ${fmt(interest.closed)}` : `${fmt(interest.started)} から` }),
       ),
       interest.origin ? el('p', { className: 'summary', textContent: `きっかけ：${interest.origin}` }) : null,
+      interest.closedReason ? el('p', { className: 'summary close-reason', textContent: `クローズの理由：${interest.closedReason}` }) : null,
     ),
     el('dl', { className: 'facts num' },
       fact('記録', `${logs.length} 件`),
@@ -243,7 +247,7 @@ async function renderCloud(target: HTMLElement, cats: CatSummary[]) {
   const boxW = Math.max(320, target.clientWidth || 1000);
   const k = Math.min(1, Math.max(0.55, boxW / 1000));
   const boxH = boxW < 640 ? boxW * 1.1 : Math.min(460, boxW * 0.45);
-  type W = { text: string; size: number; width: number; height: number; href: string; color: string; strong: boolean };
+  type W = { text: string; size: number; width: number; height: number; href: string; color: string; strong: boolean; closed?: boolean };
   const words: W[] = [];
   if (cats.length > 0) {
     const catSize = sizeScale(cats.map((c) => c.logs), 44 * k, 96 * k);
@@ -254,7 +258,7 @@ async function renderCloud(target: HTMLElement, cats: CatSummary[]) {
       words.push({ text: c.name, size, width: measure(c.name, size), height: size, href: `#${catAnchor(c.name)}`, color: c.color, strong: true });
       for (const i of c.items) {
         const s = itemSize(i.count);
-        words.push({ text: i.name, size: s, width: measure(i.name, s), height: s, href: interestHref(base, i.id), color: c.color, strong: false });
+        words.push({ text: i.name, size: s, width: measure(i.name, s), height: s, href: interestHref(base, i.id), color: c.color, strong: false, closed: i.status === 'closed' });
       }
     }
   }
@@ -280,7 +284,8 @@ async function renderCloud(target: HTMLElement, cats: CatSummary[]) {
       'font-size': p.size.toFixed(1),
       fill: p.color,
     });
-    if (!p.strong) text.setAttribute('fill-opacity', '0.8');
+    // クローズしたものは薄く
+    if (!p.strong) text.setAttribute('fill-opacity', p.closed ? '0.35' : '0.8');
     text.style.animationDelay = `${Math.min(idx * 35, 900)}ms`;
     text.textContent = p.text;
     a.append(text);

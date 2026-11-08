@@ -15,7 +15,9 @@ export type TrailInterest = {
   category: string;
   started: string; // 最初の記録の日
   last: string; // 最後の記録の日
-  status: 'active' | 'dormant';
+  status: 'active' | 'dormant' | 'closed';
+  closed?: string; // クローズした日
+  closedReason?: string; // クローズの理由
   origin?: string;
   heat?: number; // 最新の熱量
   count: number;

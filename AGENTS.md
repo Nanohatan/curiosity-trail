@@ -26,7 +26,7 @@ Avoid adding frontend frameworks such as React, Vue, or Svelte unless there is a
 
 - Records come from a public Google Sheet (form responses), fetched in the browser as CSV via the gviz endpoint. See `src/lib/sheet.ts` (`SHEET_ID`, column matching by header text).
 - Columns: 名前, カテゴリ, 何をした？, 日付, 熱量, きっかけ. Interests are derived from logs (name = id).
-- Status is automatic: `dormant` when the last log is more than 1 month old, otherwise `active`.
+- Status: `closed` when the クローズ tab (gid `CLOSE_GID`, columns 日付/名前/理由; 理由 is shown on the detail page and list) has a date on or after the interest's last log; a later log reopens it. Otherwise automatic: `dormant` when the last log is more than 1 month old, else `active`.
 - Pages are static shells; `src/scripts/app.ts` loads the sheet and renders. Interest detail is `/interest/?name=…`.
 - Pure date/stat logic is in `src/lib/trail.ts` and `src/lib/sheet.ts` with tests (`npm test`).
 - Use `url()` from `src/lib/url.ts` for internal links so the GitHub Pages base path works.
