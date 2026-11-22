@@ -37,6 +37,7 @@ const path = Astro.url.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, 
         </a>
         <a href={url('categories/')} aria-current={path.startsWith('/categories') ? 'page' : undefined}>カテゴリ</a>
         <a href={url('books/')} aria-current={path.startsWith('/books') ? 'page' : undefined}>読書予定</a>
+        <a href={url('wishes/')} aria-current={path.startsWith('/wishes') ? 'page' : undefined}>やりたいこと</a>
       </nav>
     </header>
     <main class="wrap">

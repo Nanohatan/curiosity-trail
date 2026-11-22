@@ -1,6 +1,7 @@
 // ページを開いたときにシートを読み、草・一覧・個別ページを描く。
 import { bookLink, loadBooks, type Book } from '../lib/books';
 import { layoutCloud, sizeScale } from '../lib/cloud';
+import { loadWishes, type Wish } from '../lib/wishes';
 import { loadSheet, statusLabel } from '../lib/sheet';
 import { collapseSpans, fromDay, toDay, todayIso, type TrailInterest, type TrailLog } from '../lib/trail';
 import { el, initTrail, interestHref, jpDate } from './trail-client';
@@ -345,8 +346,36 @@ function renderBooks(target: HTMLElement, books: Book[]) {
   );
 }
 
+function renderWishes(target: HTMLElement, wishes: Wish[]) {
+  const lede = document.querySelector<HTMLElement>('[data-wishes-lede]');
+  if (wishes.length === 0) {
+    target.replaceWith(el('p', { className: 'empty', textContent: 'まだやりたいことがありません。' }));
+    return;
+  }
+  if (lede) lede.textContent = `${wishes.length} 件`;
+  target.replaceChildren(
+    ...wishes.map((w) =>
+      el('li', {},
+        el('p', { className: 'wish-title' }, w.title),
+        w.note ? el('p', { className: 'wish-note' }, w.note) : null,
+      ),
+    ),
+  );
+}
+
 async function main() {
   const status = document.querySelector<HTMLElement>('[data-load-status]');
+  const wishList = document.querySelector<HTMLElement>('[data-wishes]');
+  if (wishList) {
+    try {
+      renderWishes(wishList, await loadWishes());
+      status?.remove();
+    } catch (e) {
+      console.error(e);
+      if (status) status.textContent = 'やりたいことを読み込めませんでした。時間をおいて開き直してください。';
+    }
+    return;
+  }
   const shelf = document.querySelector<HTMLElement>('[data-books]');
   if (shelf) {
     try {
