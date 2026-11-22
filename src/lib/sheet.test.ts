@@ -76,14 +76,33 @@ test('クローズタブ', () => {
 test('公開用_ログの列（終了日・テーマID・種類が増えても読める）', () => {
   const rows = [
     ['タイムスタンプ', '名前', 'カテゴリ', '何をした？', '日付', '熱量', 'きっかけ、何から派生したか？', '種類（やった・見た・読んだ・買った・行った ', '終了日', 'テーマID'],
-    ['2026/11/17', '新しいゲームの作成', '創作', 'ちょこちょこ開発', '2026/11/17', '4', '', '', '2026/11/22', 'T07'],
+    ['2026/11/17', '新しいゲームの作成', '創作', 'UI修正', '2026/11/17', '3', '', '', '', 'T07'],
     ['2026/11/07', '新しいゲームの作成', '創作', '執筆', '2026/11/07', '4', 'ゲームを作りたい', '', '', 'T07'],
   ];
   const { logs, interests } = rowsToTrail(rows, '2026-11-22');
   assert.equal(logs.length, 2);
-  assert.equal(logs[1].date, '2026-11-17'); // 終了日ではなく日付の列
+  assert.equal(logs[1].date, '2026-11-17');
   const g = interests.find((i) => i.id === '新しいゲームの作成')!;
   assert.equal(g.started, '2026-11-07');
   assert.equal(g.category, '創作');
   assert.equal(g.origin, 'ゲームを作りたい');
+});
+
+test('終了日のある行は期間中の毎日の記録になる', () => {
+  const rows = [
+    ['タイムスタンプ', '名前', 'カテゴリ', '何をした？', '日付', '熱量', 'きっかけ', '終了日', 'テーマID'],
+    ['2026/11/17', '新しいゲームの作成', '創作', 'ちょこちょこ開発', '2026/11/17', '4', '作りたい', '2026/11/22', 'T07'],
+    ['2026/11/20', '翻訳の勉強', '言語', '本', '2026/11/20', '3', '', '2026/11/19', 'T01'], // 終了日が前なら 1 日だけ
+  ];
+  const { logs, interests } = rowsToTrail(rows, '2026-11-22');
+  const game = logs.filter((l) => l.interest === '新しいゲームの作成');
+  assert.deepEqual(game.map((l) => l.date), ['2026-11-17', '2026-11-18', '2026-11-19', '2026-11-20', '2026-11-21', '2026-11-22']);
+  assert.ok(game.every((l) => l.heat === 4 && l.action === 'ちょこちょこ開発'));
+  assert.equal(game[0].origin, '作りたい');
+  assert.equal(game[1].origin, undefined);
+  const g = interests.find((i) => i.id === '新しいゲームの作成')!;
+  assert.equal(g.started, '2026-11-17');
+  assert.equal(g.last, '2026-11-22');
+  assert.equal(g.count, 6);
+  assert.equal(logs.filter((l) => l.interest === '翻訳の勉強').length, 1);
 });

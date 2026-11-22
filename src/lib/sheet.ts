@@ -2,9 +2,12 @@
 // 公開用タブは「ログ」「テーマ」から数式で作られ、名前は常にテーマの現在の表示名になる。
 // ブラウザで実行するので、シートに書き足せば再ビルドなしで反映される。
 
-import { toDay, type TrailInterest, type TrailLog } from './trail.ts';
+import { fromDay, toDay, type TrailInterest, type TrailLog } from './trail.ts';
 
 export const SHEET_ID = '1V2DwC3UR-5L5FeZ9c6Vrco47osiYCNVMPPqySt25o1g';
+
+/** 期間で書いた記録を毎日の記録に広げるときの上限日数（書き間違いで延々と広がらないように） */
+export const MAX_SPAN_DAYS = 366;
 
 /** 最後の記録からこの月数が過ぎたら「休眠中」 */
 export const DORMANT_AFTER_MONTHS = 1;
@@ -114,6 +117,7 @@ export function rowsToTrail(
     date: column(header, '日付'),
     heat: column(header, '熱量'),
     origin: column(header, 'きっかけ'),
+    end: column(header, '終了日'),
   };
   const get = (r: string[], i: number) => (i >= 0 ? (r[i] ?? '').trim() : '');
 
@@ -123,14 +127,20 @@ export function rowsToTrail(
     const date = normalizeDate(get(r, col.date)) ?? normalizeDate(get(r, col.stamp));
     if (!name || !date) continue;
     const heat = Number(get(r, col.heat));
-    logs.push({
-      date,
+    const base = {
       interest: name,
       category: get(r, col.category) || '未分類',
       action: get(r, col.action),
       heat: Number.isFinite(heat) && heat > 0 ? heat : undefined,
-      origin: get(r, col.origin) || undefined,
-    });
+    };
+    // 終了日があれば、開始日から終了日まで毎日その作業をしていたことにする。
+    // きっかけは最初の日にだけ付ける。
+    const end = normalizeDate(get(r, col.end));
+    const first = toDay(date);
+    const last = end && end > date ? Math.min(toDay(end), first + MAX_SPAN_DAYS - 1) : first;
+    for (let d = first; d <= last; d++) {
+      logs.push({ ...base, date: fromDay(d), origin: d === first ? get(r, col.origin) || undefined : undefined });
+    }
   }
   logs.sort((a, b) => a.date.localeCompare(b.date));
 
