@@ -1,4 +1,5 @@
-// Google スプレッドシート（フォームの回答）を読み、草や一覧で使う形に揃える。
+// Google スプレッドシート（公開用_ログ・公開用_クローズ）を読み、草や一覧で使う形に揃える。
+// 公開用タブは「ログ」「テーマ」から数式で作られ、名前は常にテーマの現在の表示名になる。
 // ブラウザで実行するので、シートに書き足せば再ビルドなしで反映される。
 
 import { toDay, type TrailInterest, type TrailLog } from './trail.ts';
@@ -8,8 +9,11 @@ export const SHEET_ID = '1V2DwC3UR-5L5FeZ9c6Vrco47osiYCNVMPPqySt25o1g';
 /** 最後の記録からこの月数が過ぎたら「休眠中」 */
 export const DORMANT_AFTER_MONTHS = 1;
 
-/** 「クローズ」タブの gid（日付・名前・理由。飽きたものを書く） */
-export const CLOSE_GID = '1726596149';
+/** 「公開用_ログ」タブの gid（ログ × テーマを数式で並べたもの。直接は書かない） */
+export const LOG_GID = '1123487039';
+
+/** 「公開用_クローズ」タブの gid（テーマの終了日・終了理由から数式で作る。日付・名前・理由） */
+export const CLOSE_GID = '402763390';
 
 export function sheetCsvUrl(id = SHEET_ID, gid?: string): string {
   return `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv${gid ? `&gid=${gid}` : ''}`;
@@ -179,10 +183,10 @@ async function fetchCsv(gid?: string): Promise<string[][]> {
   return parseCsv(await res.text());
 }
 
-/** 記録とクローズのタブを 1 回だけ読む（同じページ内で使い回す）。クローズが読めなくても記録は出す。 */
+/** 公開用のログとクローズのタブを 1 回だけ読む（同じページ内で使い回す）。クローズが読めなくても記録は出す。 */
 export function loadSheet(today: string): Promise<{ logs: TrailLog[]; interests: TrailInterest[] }> {
   cache ??= Promise.all([
-    fetchCsv(),
+    fetchCsv(LOG_GID),
     fetchCsv(CLOSE_GID).catch((e) => {
       console.warn(e);
       return [] as string[][];

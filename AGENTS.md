@@ -24,9 +24,9 @@ Avoid adding frontend frameworks such as React, Vue, or Svelte unless there is a
 
 ## Data
 
-- Records come from a public Google Sheet (form responses), fetched in the browser as CSV via the gviz endpoint. See `src/lib/sheet.ts` (`SHEET_ID`, column matching by header text).
-- Columns: 名前, カテゴリ, 何をした？, 日付, 熱量, きっかけ. Interests are derived from logs (name = id).
-- Status: `closed` when the クローズ tab (gid `CLOSE_GID`, columns 日付/名前/理由; 理由 is shown on the detail page and list) has a date on or after the interest's last log; a later log reopens it. Otherwise automatic: `dormant` when the last log is more than 1 month old, else `active`.
+- Records come from a public Google Sheet, fetched in the browser as CSV via the gviz endpoint. See `src/lib/sheet.ts` (`SHEET_ID`, `LOG_GID`, `CLOSE_GID`, column matching by header text).
+- The user writes to the ログ tab (日付/名前/何をした/熱量/種類/終了日) and the テーマ tab (テーマID/表示名/カテゴリ/派生元ID/きっかけ/開始日/終了日/終了理由); 別名 maps old names to テーマID. The site reads only the formula-built tabs 公開用_ログ (`LOG_GID`: タイムスタンプ, 名前 = current 表示名, カテゴリ, 何をした？, 日付, 熱量, きっかけ on the theme's first log, 種類, 終了日, テーマID) and 公開用_クローズ (`CLOSE_GID`: 日付/名前/理由/テーマID). Interests are derived from logs (name = id). `archive_*` tabs are the old form data and are not read.
+- Status: `closed` when 公開用_クローズ has a date on or after the interest's last log (理由 is shown on the detail page and list); a later log reopens it. Otherwise automatic: `dormant` when the last log is more than 1 month old, else `active`.
 - Pages are static shells; `src/scripts/app.ts` loads the sheet and renders. Interest detail is `/interest/?name=…`.
 - Pure date/stat logic is in `src/lib/trail.ts` and `src/lib/sheet.ts` with tests (`npm test`).
 - Use `url()` from `src/lib/url.ts` for internal links so the GitHub Pages base path works.

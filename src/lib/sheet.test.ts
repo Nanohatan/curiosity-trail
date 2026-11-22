@@ -72,3 +72,18 @@ test('クローズタブ', () => {
   assert.equal(cook.closed, undefined);
   assert.equal(interests.find((i) => i.id === '写真')!.status, 'active');
 });
+
+test('公開用_ログの列（終了日・テーマID・種類が増えても読める）', () => {
+  const rows = [
+    ['タイムスタンプ', '名前', 'カテゴリ', '何をした？', '日付', '熱量', 'きっかけ、何から派生したか？', '種類（やった・見た・読んだ・買った・行った ', '終了日', 'テーマID'],
+    ['2026/11/17', '新しいゲームの作成', '創作', 'ちょこちょこ開発', '2026/11/17', '4', '', '', '2026/11/22', 'T07'],
+    ['2026/11/07', '新しいゲームの作成', '創作', '執筆', '2026/11/07', '4', 'ゲームを作りたい', '', '', 'T07'],
+  ];
+  const { logs, interests } = rowsToTrail(rows, '2026-11-22');
+  assert.equal(logs.length, 2);
+  assert.equal(logs[1].date, '2026-11-17'); // 終了日ではなく日付の列
+  const g = interests.find((i) => i.id === '新しいゲームの作成')!;
+  assert.equal(g.started, '2026-11-07');
+  assert.equal(g.category, '創作');
+  assert.equal(g.origin, 'ゲームを作りたい');
+});
