@@ -138,8 +138,9 @@ export function rowsToTrail(
     const end = normalizeDate(get(r, col.end));
     const first = toDay(date);
     const last = end && end > date ? Math.min(toDay(end), first + MAX_SPAN_DAYS - 1) : first;
+    const span = last > first ? { start: date, end: fromDay(last) } : undefined;
     for (let d = first; d <= last; d++) {
-      logs.push({ ...base, date: fromDay(d), origin: d === first ? get(r, col.origin) || undefined : undefined });
+      logs.push({ ...base, date: fromDay(d), origin: d === first ? get(r, col.origin) || undefined : undefined, ...(span ? { span } : {}) });
     }
   }
   logs.sort((a, b) => a.date.localeCompare(b.date));
@@ -163,7 +164,8 @@ export function rowsToTrail(
       // カテゴリと熱量は新しい記録のものを使う。きっかけは最初に書かれたもの。
       cur.category = l.category;
       cur.last = l.date;
-      cur.count += 1;
+      // 期間で書いた記録は、表示上 1 件と数える（2 日目以降は数えない）
+      if (!l.span || l.date === l.span.start) cur.count += 1;
       if (l.heat !== undefined) cur.heat = l.heat;
       cur.origin ??= l.origin;
     }

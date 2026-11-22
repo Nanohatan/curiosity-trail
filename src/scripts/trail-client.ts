@@ -1,5 +1,5 @@
 import {
-  bucketByDay, fromDay, level, metricValue, periodStats, streakEndingAt, toDay, todayIso, weekday,
+  bucketByDay, collapseSpans, fromDay, level, logEnd, metricValue, periodStats, streakEndingAt, toDay, todayIso, weekday,
   type Metric, type Period, type TrailInterest, type TrailLog, type DayBucket,
 } from '../lib/trail';
 
@@ -30,6 +30,17 @@ export function jpDate(iso: string, withWeekday = true): string {
   const [, m, d] = iso.split('-').map(Number);
   const wd = withWeekday ? `（${WEEKDAYS[weekday(toDay(iso))]}）` : '';
   return `${m}月${d}日${wd}`;
+}
+
+/** 期間の終わりの日。同じ年月なら日だけ、同じ年なら月日。 */
+function shortEnd(start: string, end: string): string {
+  const [, sm] = start.split('-').map(Number);
+  const [, m, d] = end.split('-').map(Number);
+  return start.slice(0, 4) === end.slice(0, 4) && sm === m ? `${d}日` : jpDate(end, false);
+}
+
+export function spanText(span: { start: string; end: string }): string {
+  return `${jpDate(span.start, false)}〜${shortEnd(span.start, span.end)}`;
 }
 
 function store(key: string, value?: string): string | null {
@@ -164,7 +175,7 @@ export function initTrail(root: HTMLElement, logs: TrailLog[], interests: TrailI
     return el(
       'li',
       { className: 'log' },
-      showDate ? el('time', { className: 'log-date num', dateTime: log.date, textContent: jpDate(log.date, false) }) : null,
+      showDate ? logDate(log) : null,
       el(
         'div',
         { className: 'log-body' },
@@ -175,16 +186,34 @@ export function initTrail(root: HTMLElement, logs: TrailLog[], interests: TrailI
           el('a', { href: href(log.interest), textContent: interest?.name ?? log.interest }),
           el('span', { className: 'log-cat', textContent: log.category }),
           log.heat ? el('span', { className: 'log-kind num', textContent: `熱量 ${log.heat}` }) : null,
+          !showDate && log.span ? el('span', { className: 'log-kind num', textContent: `期間 ${spanText(log.span)}` }) : null,
         ),
         log.origin ? el('p', { className: 'log-note', textContent: `きっかけ：${log.origin}` }) : null,
       ),
     );
   }
 
+  /** 一覧の日付。期間で書いた記録は「11月17日 / 〜22日」の 2 行にする。 */
+  function logDate(log: TrailLog) {
+    if (!log.span) return el('time', { className: 'log-date num', dateTime: log.date, textContent: jpDate(log.date, false) });
+    return el(
+      'span',
+      { className: 'log-date num' },
+      el('time', { dateTime: log.span.start, textContent: jpDate(log.span.start, false) }),
+      el('br'),
+      '〜',
+      el('time', { dateTime: log.span.end, textContent: shortEnd(log.span.start, log.span.end) }),
+    );
+  }
+
   function renderDetail() {
     detail.replaceChildren();
     if (selected === null) {
-      const recent = logs.slice(-5).reverse();
+      // 期間で書いた記録は 1 件にまとめ、終わりの日の順に並べる
+      const recent = collapseSpans(logs)
+        .sort((a, b) => logEnd(a).localeCompare(logEnd(b)))
+        .slice(-5)
+        .reverse();
       detail.append(el('h3', { textContent: '最近の記録' }));
       if (recent.length === 0) {
         detail.append(el('p', { className: 'empty', textContent: 'まだ記録がありません。' }));

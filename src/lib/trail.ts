@@ -7,6 +7,7 @@ export type TrailLog = {
   action: string;
   heat?: number; // 熱量 1〜5
   origin?: string; // きっかけ
+  span?: { start: string; end: string }; // 期間で書いた記録を毎日に広げたとき、その期間（両端を含む）
 };
 
 export type TrailInterest = {
@@ -22,6 +23,26 @@ export type TrailInterest = {
   heat?: number; // 最新の熱量
   count: number;
 };
+
+/** 表示上の記録の終わりの日（期間で書いたものは終了日）。 */
+export function logEnd(l: TrailLog): string {
+  return l.span?.end ?? l.date;
+}
+
+/** 期間で書いて毎日に広げた記録を、表示用に 1 件へまとめる（最初の日の記録を残す）。並びは入力のまま。 */
+export function collapseSpans(logs: TrailLog[]): TrailLog[] {
+  const seen = new Set<string>();
+  const out: TrailLog[] = [];
+  for (const l of logs) {
+    if (l.span) {
+      const key = `${l.interest}\u0000${l.action}\u0000${l.span.start}\u0000${l.span.end}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ ...l, date: l.span.start });
+    } else out.push(l);
+  }
+  return out;
+}
 
 export type Period = 'week' | 'month' | 'year';
 export type Metric = 'actions' | 'categories';

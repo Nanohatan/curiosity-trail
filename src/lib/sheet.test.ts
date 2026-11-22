@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { collapseSpans, logEnd } from './trail.ts';
 import { addMonths, normalizeDate, parseCsv, rowsToClosures, rowsToTrail, statusOf } from './sheet.ts';
 
 test('CSV の読み取り', () => {
@@ -103,6 +104,15 @@ test('終了日のある行は期間中の毎日の記録になる', () => {
   const g = interests.find((i) => i.id === '新しいゲームの作成')!;
   assert.equal(g.started, '2026-11-17');
   assert.equal(g.last, '2026-11-22');
-  assert.equal(g.count, 6);
+  assert.equal(g.count, 1); // 表示上は 1 件
+  assert.deepEqual(game[3].span, { start: '2026-11-17', end: '2026-11-22' });
+
+  // 表示用には 1 件にまとまり、日付は開始日、終わりは終了日
+  const shown = collapseSpans(logs);
+  assert.equal(shown.length, 2);
+  const one = shown.find((l) => l.interest === '新しいゲームの作成')!;
+  assert.equal(one.date, '2026-11-17');
+  assert.equal(logEnd(one), '2026-11-22');
+  assert.equal(one.origin, '作りたい');
   assert.equal(logs.filter((l) => l.interest === '翻訳の勉強').length, 1);
 });

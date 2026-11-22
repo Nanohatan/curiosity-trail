@@ -2,7 +2,7 @@
 import { bookLink, loadBooks, type Book } from '../lib/books';
 import { layoutCloud, sizeScale } from '../lib/cloud';
 import { loadSheet, statusLabel } from '../lib/sheet';
-import { fromDay, toDay, todayIso, type TrailInterest, type TrailLog } from '../lib/trail';
+import { collapseSpans, fromDay, toDay, todayIso, type TrailInterest, type TrailLog } from '../lib/trail';
 import { el, initTrail, interestHref, jpDate } from './trail-client';
 
 const base = document.documentElement.dataset.base ?? '/';
@@ -88,7 +88,7 @@ function renderDetail(target: HTMLElement, interest: TrailInterest | undefined, 
       interest.closedReason ? el('p', { className: 'summary close-reason', textContent: `クローズの理由：${interest.closedReason}` }) : null,
     ),
     el('dl', { className: 'facts num' },
-      fact('記録', `${logs.length} 件`),
+      fact('記録', `${collapseSpans(logs).length} 件`),
       fact('動いた日', `${days} 日`),
       fact('最後の記録', fmt(interest.last)),
       fact('熱量', interest.heat ? `${interest.heat} / 5` : '—'),
