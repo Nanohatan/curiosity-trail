@@ -53,8 +53,9 @@ function store(key: string, value?: string): string | null {
   return null;
 }
 
-export function interestHref(base: string, name: string) {
-  return `${base}interest/?name=${encodeURIComponent(name)}`;
+/** 個別ページへのリンク。テーマIDで張るので、名前を変えてもリンクは切れない。 */
+export function interestHref(base: string, id: string) {
+  return `${base}interest/?id=${encodeURIComponent(id)}`;
 }
 
 export function initTrail(root: HTMLElement, logs: TrailLog[], interests: TrailInterest[], base: string) {
@@ -189,6 +190,7 @@ export function initTrail(root: HTMLElement, logs: TrailLog[], interests: TrailI
           !showDate && log.span ? el('span', { className: 'log-kind num', textContent: `期間 ${spanText(log.span)}` }) : null,
         ),
         log.origin ? el('p', { className: 'log-note', textContent: `きっかけ：${log.origin}` }) : null,
+        log.rename ? el('p', { className: 'log-note log-rename', textContent: `名前を変更：${log.rename.from} → ${log.rename.to}` }) : null,
       ),
     );
   }

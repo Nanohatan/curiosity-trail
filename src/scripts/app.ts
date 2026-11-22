@@ -87,6 +87,9 @@ function renderDetail(target: HTMLElement, interest: TrailInterest | undefined, 
       ),
       interest.origin ? el('p', { className: 'summary', textContent: `きっかけ：${interest.origin}` }) : null,
       interest.closedReason ? el('p', { className: 'summary close-reason', textContent: `クローズの理由：${interest.closedReason}` }) : null,
+      interest.renames?.length
+        ? el('p', { className: 'summary renames num', textContent: `名前の変更：${interest.renames.map((r) => `${fmt(r.date)} ${r.from} → ${r.to}`).join('、')}` })
+        : null,
     ),
     el('dl', { className: 'facts num' },
       fact('記録', `${collapseSpans(logs).length} 件`),
@@ -392,9 +395,15 @@ async function main() {
     status?.remove();
 
     const detail = document.querySelector<HTMLElement>('[data-interest-detail]');
-    const name = new URLSearchParams(location.search).get('name') ?? '';
-    const scoped = detail ? logs.filter((l) => l.interest === name) : logs;
-    const scopedInterests = detail ? interests.filter((i) => i.id === name) : interests;
+    // ?id=T07 で開く。前の形の ?name=名前 も、今の名前・前の名前・IDのどれでも開けるようにする。
+    const params = new URLSearchParams(location.search);
+    const key = params.get('id') ?? params.get('name') ?? '';
+    const found =
+      interests.find((i) => i.id === key) ??
+      interests.find((i) => i.name === key || i.renames?.some((r) => r.from === key));
+    const id = found?.id ?? key;
+    const scoped = detail ? logs.filter((l) => l.interest === id) : logs;
+    const scopedInterests = detail ? interests.filter((i) => i.id === id) : interests;
     if (detail) renderDetail(detail, scopedInterests[0], scoped);
 
     document.querySelectorAll<HTMLElement>('[data-trail]').forEach((root) => {

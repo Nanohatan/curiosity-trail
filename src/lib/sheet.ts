@@ -86,15 +86,17 @@ export function statusOf(lastDate: string, today: string, closed?: string): Trai
 
 export type Closure = { date: string; reason?: string };
 
-/** 「クローズ」タブの行を、名前 → クローズした日と理由（同じ名前が何度あれば最新の行）に。 */
+/** 「クローズ」タブの行を、テーマID（なければ名前）→ クローズした日と理由（何度あれば最新の行）に。 */
 export function rowsToClosures(rows: string[][]): Map<string, Closure> {
   const [header = [], ...body] = rows;
   const name = column(header, '名前');
+  const theme = column(header, 'テーマID');
   const date = column(header, '日付');
   const reason = column(header, '理由');
   const map = new Map<string, Closure>();
   for (const r of body) {
-    const n = (r[name] ?? '').trim();
+    // テーマIDがあればそれで、なければ名前でハマりごとを見分ける
+    const n = ((theme >= 0 ? r[theme] : '') || r[name] || '').trim();
     const d = normalizeDate(r[date] ?? '');
     if (!n || !d) continue;
     const why = reason >= 0 ? (r[reason] ?? '').trim() : '';
@@ -118,17 +120,25 @@ export function rowsToTrail(
     heat: column(header, '熱量'),
     origin: column(header, 'きっかけ'),
     end: column(header, '終了日'),
+    theme: column(header, 'テーマID'),
+    title: column(header, '表示タイトル名'),
   };
   const get = (r: string[], i: number) => (i >= 0 ? (r[i] ?? '').trim() : '');
 
   const logs: TrailLog[] = [];
+  // テーマIDごとの「名前」列の値（表示タイトル名がどこにも書かれていないときの名前）
+  const fallbackName = new Map<string, string>();
   for (const r of body) {
     const name = get(r, col.name);
+    // テーマIDでハマりごとを見分ける（名前を変えても同じもの）。なければ名前で。
+    const id = get(r, col.theme) || name;
     const date = normalizeDate(get(r, col.date)) ?? normalizeDate(get(r, col.stamp));
-    if (!name || !date) continue;
+    if (!id || !date) continue;
+    if (name) fallbackName.set(id, name);
+    const title = get(r, col.title) || undefined;
     const heat = Number(get(r, col.heat));
     const base = {
-      interest: name,
+      interest: id,
       category: get(r, col.category) || '未分類',
       action: get(r, col.action),
       heat: Number.isFinite(heat) && heat > 0 ? heat : undefined,
@@ -140,7 +150,13 @@ export function rowsToTrail(
     const last = end && end > date ? Math.min(toDay(end), first + MAX_SPAN_DAYS - 1) : first;
     const span = last > first ? { start: date, end: fromDay(last) } : undefined;
     for (let d = first; d <= last; d++) {
-      logs.push({ ...base, date: fromDay(d), origin: d === first ? get(r, col.origin) || undefined : undefined, ...(span ? { span } : {}) });
+      logs.push({
+        ...base,
+        date: fromDay(d),
+        origin: d === first ? get(r, col.origin) || undefined : undefined,
+        ...(d === first && title ? { title } : {}),
+        ...(span ? { span } : {}),
+      });
     }
   }
   logs.sort((a, b) => a.date.localeCompare(b.date));
@@ -151,7 +167,8 @@ export function rowsToTrail(
     if (!cur) {
       map.set(l.interest, {
         id: l.interest,
-        name: l.interest,
+        // 表示名は表示タイトル名を書いた最新の行のもの（なければ名前列、それもなければID）
+        name: l.title ?? fallbackName.get(l.interest) ?? l.interest,
         category: l.category,
         started: l.date,
         last: l.date,
@@ -161,6 +178,12 @@ export function rowsToTrail(
         count: 1,
       });
     } else {
+      // 表示タイトル名が前と違えば、その日に名前を変えたことにする
+      if (l.title && l.title !== cur.name) {
+        l.rename = { from: cur.name, to: l.title };
+        (cur.renames ??= []).push({ date: l.date, from: cur.name, to: l.title });
+        cur.name = l.title;
+      }
       // カテゴリと熱量は新しい記録のものを使う。きっかけは最初に書かれたもの。
       cur.category = l.category;
       cur.last = l.date;
@@ -172,8 +195,8 @@ export function rowsToTrail(
   }
   // クローズタブに書いた日が最後の記録と同じかそれより後ならクローズ。
   // クローズのあとに記録を書けば、また「ハマり中」に戻る。
-  for (const [name, c] of closures) {
-    const i = map.get(name);
+  for (const [key, c] of closures) {
+    const i = map.get(key);
     if (i && c.date >= i.last) {
       i.closed = c.date;
       i.closedReason = c.reason;

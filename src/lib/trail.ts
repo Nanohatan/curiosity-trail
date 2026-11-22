@@ -8,6 +8,8 @@ export type TrailLog = {
   heat?: number; // 熱量 1〜5
   origin?: string; // きっかけ
   span?: { start: string; end: string }; // 期間で書いた記録を毎日に広げたとき、その期間（両端を含む）
+  title?: string; // この記録の行に書いた表示タイトル名（書いた行だけ）
+  rename?: { from: string; to: string }; // この記録で名前が変わったとき
 };
 
 export type TrailInterest = {
@@ -22,6 +24,7 @@ export type TrailInterest = {
   origin?: string;
   heat?: number; // 最新の熱量
   count: number;
+  renames?: Array<{ date: string; from: string; to: string }>; // 名前を変えた履歴（古い順）
 };
 
 /** 表示上の記録の終わりの日（期間で書いたものは終了日）。 */
